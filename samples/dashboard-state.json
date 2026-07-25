@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-07-25T10:42:00-04:00",
+  "weather": {
+    "state": "ok",
+    "data": {
+      "current_temperature_f": 72,
+      "current_condition": "partly_cloudy",
+      "today_high_f": 78,
+      "today_low_f": 65,
+      "tonight_low_f": 64,
+      "tonight_rain_percent": 10,
+      "tomorrow_high_f": 80,
+      "tomorrow_low_f": 66,
+      "tomorrow_rain_percent": 40
+    }
+  },
+  "claude": {
+    "state": "ok",
+    "data": {
+      "window_label": "5-HOUR",
+      "percent_remaining": 63,
+      "resets_at": "2026-07-25T14:15:00-04:00",
+      "secondary_label": "WEEK",
+      "secondary_percent_remaining": 81
+    }
+  },
+  "codex": {
+    "state": "ok",
+    "data": {
+      "window_label": "5-HOUR",
+      "percent_remaining": 71,
+      "resets_at": "2026-07-25T15:00:00-04:00",
+      "secondary_label": "WEEK",
+      "secondary_percent_remaining": null
+    }
+  },
+  "gmail": {
+    "state": "ok",
+    "data": { "unread": 12 }
+  },
+  "quote": {
+    "state": "ok",
+    "data": {
+      "text": "Make it work, make it right, make it fast.",
+      "attribution": "— KENT BECK"
+    }
+  }
+}

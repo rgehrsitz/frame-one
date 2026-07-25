@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Frame One — 800 × 480 preview</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Serif:ital,wght@1,400&display=swap');
+
+      :root { --paper: #fff; --ink: #000; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f0eee8; }
+      .screen { width: min(100vw, 1000px); aspect-ratio: 5 / 3; background: var(--paper); color: var(--ink); font-family: "Barlow Condensed", sans-serif; display: grid; grid-template-rows: 22.1% 8.75% 55.4% 13.75%; }
+      .header, .forecast, .status, .footer { border-bottom: 2px solid var(--ink); }
+      .header { display: grid; grid-template-columns: 1fr 1.2fr 1fr; align-items: center; padding: 0 4.5%; }
+      .date, .now, .forecast, .support, .attribution { font-family: "IBM Plex Mono", monospace; }
+      .date, .now { font-family: "Barlow Condensed", sans-serif; font-size: clamp(21px, 3.5vw, 36px); letter-spacing: .06em; }
+      .now { text-align: right; }
+      .time { font-size: clamp(58px, 11vw, 116px); font-weight: 600; text-align: center; line-height: .8; }
+      .forecast, .status { display: grid; grid-template-columns: repeat(3, 1fr); }
+      .forecast div { display: grid; place-items: center; border-right: 1px solid var(--ink); font-family: "IBM Plex Mono", monospace; font-size: clamp(12px, 1.8vw, 19px); white-space: nowrap; }
+      .forecast div:last-child, .status article:last-child { border-right: 0; }
+      .status article { padding: 8% 8% 5%; border-right: 1px solid var(--ink); text-align: center; display: flex; flex-direction: column; align-items: center; }
+      h2 { margin: 0; font-size: clamp(33px, 5vw, 54px); font-weight: 600; letter-spacing: .05em; }
+      .label { margin-top: 7%; font-family: "IBM Plex Mono", monospace; font-size: clamp(14px, 2vw, 22px); }
+      .value { margin: 4% 0 0; font-size: clamp(92px, 14vw, 150px); font-weight: 600; line-height: .78; }
+      .support { margin-top: auto; display: grid; gap: 9px; font-size: clamp(12px, 1.8vw, 19px); text-align: left; }
+      .footer { border: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 4.5%; gap: 20px; }
+      .quote { font: italic clamp(15px, 2.3vw, 24px) "IBM Plex Serif", serif; }
+      .attribution { white-space: nowrap; font-size: clamp(11px, 1.55vw, 16px); letter-spacing: .06em; }
+    </style>
+  </head>
+  <body>
+    <main class="screen" aria-label="Frame One dashboard preview">
+      <header class="header"><div class="date">FRI · JUL 24</div><div class="time">10:42</div><div class="now">NOW 72° ⛅</div></header>
+      <section class="forecast" aria-label="Forecast"><div>TODAY&nbsp; 78° / 65°</div><div>TONIGHT&nbsp; 64° · 10% RAIN</div><div>TOMORROW&nbsp; 80° / 66° · 40% RAIN</div></section>
+      <section class="status" aria-label="Status">
+        <article><h2>CLAUDE</h2><div class="label">5-HOUR</div><div class="value">63%</div><div class="support"><span>WEEK&nbsp; 81%</span><span>RESETS&nbsp; 2:15 PM</span></div></article>
+        <article><h2>CODEX</h2><div class="label">5-HOUR</div><div class="value">71%</div><div class="support"><span>WEEK&nbsp; —</span><span>RESETS&nbsp; 3:00 PM</span></div></article>
+        <article><h2>GMAIL</h2><div class="value">12</div><div class="label">UNREAD</div></article>
+      </section>
+      <footer class="footer"><div class="quote">Make it work, make it right, make it fast.</div><div class="attribution">— KENT BECK</div></footer>
+    </main>
+  </body>
+</html>

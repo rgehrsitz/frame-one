@@ -1,0 +1,14 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+output/
+.env
+.env.*
+!*.env.example
+secrets/
+*.pem
+*.key
