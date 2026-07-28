@@ -136,6 +136,15 @@ def _format_reset(value: Any) -> str:
         return str(value)
 
 
+def _format_reset_date(value: Any) -> str:
+    if not value:
+        return "—"
+    try:
+        return datetime.fromisoformat(str(value)).strftime("%a, %b %-d").upper()
+    except ValueError:
+        return str(value)
+
+
 def _weather_mark(draw: ImageDraw.ImageDraw, x: int, y: int, code: str) -> None:
     """Draw a small weather mark without relying on emoji glyph support."""
     if code in {"clear", "partly_cloudy"}:
@@ -191,19 +200,26 @@ def _render_usage_column(
     title_font = _fit_font(draw, "display", title, 36, width - 32)
     label_font = _fit_font(draw, "mono", default_window, 18, width - 32)
     value = _percent(_provider_data(provider, "percent_remaining"))
-    value_font = _fit_font(draw, "display", value, 90, width - 28)
-    support_font = _fit_font(draw, "mono", "RESETS 12:00 PM", 17, width - 32)
+    value_font = _fit_font(draw, "display", value, 84, width - 28)
+    support_font = _fit_font(draw, "mono", "WEEK  81% · MON, JUL 28", 14, width - 32)
 
     _centered(draw, (left, top + 18, right, top + 62), title, title_font)
     window_label = _provider_data(provider, "window_label", default_window)
     _centered(draw, (left, top + 62, right, top + 88), str(window_label), label_font)
-    _centered(draw, (left, top + 82, right, top + 180), value, value_font)
+    _centered(draw, (left, top + 80, right, top + 164), value, value_font)
 
     secondary_label = _provider_data(provider, "secondary_label", "WEEK")
     secondary = _percent(_provider_data(provider, "secondary_percent_remaining"))
-    reset = _format_reset(_provider_data(provider, "resets_at"))
-    _left(draw, left + 34, bottom - 68, f"{secondary_label}  {secondary}", support_font)
-    _left(draw, left + 34, bottom - 37, f"RESETS  {reset}", support_font)
+    primary_reset = _format_reset(_provider_data(provider, "resets_at"))
+    secondary_reset_at = _provider_data(provider, "secondary_resets_at")
+    secondary_date = _format_reset_date(secondary_reset_at)
+    secondary_reset = _format_reset(secondary_reset_at)
+    _left(draw, left + 34, bottom - 92, f"RESET  {primary_reset}", support_font)
+    if secondary_reset_at:
+        _left(draw, left + 34, bottom - 61, f"{secondary_label}  {secondary} · {secondary_date}", support_font)
+        _left(draw, left + 34, bottom - 30, f"RESET  {secondary_reset}", support_font)
+    else:
+        _left(draw, left + 34, bottom - 61, f"{secondary_label}  {secondary}", support_font)
 
 
 def render_dashboard(state: Mapping[str, Any]) -> Image.Image:

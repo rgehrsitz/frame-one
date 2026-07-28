@@ -52,7 +52,7 @@ The desktop preview may use `#f7f5ef` as its page background to evoke paper, but
 
 - The header always stays stable: date left, last-updated stamp centered, current condition right. It is not a live clock; it changes only when an intentional screen refresh occurs.
 - The forecast strip shows **Today**, **Tonight**, and **Tomorrow**. Every label uses the same 20 px condensed face; every value uses the same 15 px mono face. Use tight temperature pairs (`78°/65°`), not padded ones, and preserve the type scale rather than shrinking a long third item.
-- Claude and Codex each show the current five-hour allowance, weekly allowance when available, and the next reset. Missing data renders as an em dash—never guessed or stale-looking values.
+- Claude and Codex each show the current five-hour allowance, its reset time, weekly allowance when available, and the weekly reset's date and time. Missing data renders as an em dash—never guessed or stale-looking values.
 - Gmail shows only unread count. It must not expose subject lines or personal message content.
 - Quotes are short, attributed, and fetched once at the daily refresh. There is no quote cache or fallback.
 

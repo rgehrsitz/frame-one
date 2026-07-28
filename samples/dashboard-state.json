@@ -21,7 +21,8 @@
       "percent_remaining": 63,
       "resets_at": "2026-07-25T14:15:00-04:00",
       "secondary_label": "WEEK",
-      "secondary_percent_remaining": 81
+      "secondary_percent_remaining": 81,
+      "secondary_resets_at": "2026-07-28T00:00:00-04:00"
     }
   },
   "codex": {
@@ -31,7 +32,8 @@
       "percent_remaining": 71,
       "resets_at": "2026-07-25T15:00:00-04:00",
       "secondary_label": "WEEK",
-      "secondary_percent_remaining": null
+      "secondary_percent_remaining": null,
+      "secondary_resets_at": null
     }
   },
   "gmail": {

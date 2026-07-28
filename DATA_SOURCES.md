@@ -89,7 +89,7 @@ Codex usage is plan-dependent and can be shared with other agentic features. For
 
 **Authentication:** the user completes the supported local ChatGPT/device-code sign-in once on the Pi. The dashboard process must communicate with the App Server only through its documented local protocol; it must not extract, copy, log, or transmit Codex authentication tokens.
 
-**Screen mapping:** map the returned rate-limit windows to the two Codex lines in the UI. Preserve the server-provided labels and reset times rather than assuming a fixed five-hour or weekly model. If the account does not expose a secondary window, show `WEEK —`.
+**Screen mapping:** map the returned rate-limit windows to the two Codex lines in the UI. Preserve the server-provided labels and reset times rather than assuming a fixed five-hour or weekly model. The secondary reset must include its calendar date as well as its time. If the account does not expose a secondary window, show `WEEK —`.
 
 **Fallback:** if a plan does not return a dashboard-suitable window, show `—` and retain the optional manual bridge. Never calculate a remaining allowance from task counts or token estimates.
 
