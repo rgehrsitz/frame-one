@@ -7,7 +7,12 @@ name = "frame-one"
 version = "0.1.0"
 description = "Deterministic renderer for the Frame One e-paper dashboard"
 requires-python = ">=3.11"
-dependencies = ["Pillow>=11.0"]
+dependencies = [
+    "Pillow>=11.0",
+    "spidev>=3.6; sys_platform == 'linux'",
+    "gpiozero>=2.0; sys_platform == 'linux'",
+    "lgpio>=0.2.2.0; sys_platform == 'linux'",
+]
 
 [project.scripts]
 frame-one = "frame_one.cli:main"
