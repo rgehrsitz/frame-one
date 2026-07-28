@@ -10,5 +10,7 @@ output/
 .env.*
 !*.env.example
 secrets/
+*.token.json
+credentials.json
 *.pem
 *.key

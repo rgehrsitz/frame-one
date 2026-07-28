@@ -4,7 +4,7 @@
 
 Frame One turns a Raspberry Pi Zero 2 W and a 7.5-inch Waveshare e-paper panel into a long, low dashboard for weather, AI allowance, Gmail unread count, and one daily quote. It is designed for slow, deliberate updates—not a constantly moving screen.
 
-> **Early prototype:** the deterministic renderer, Open-Meteo weather adapter, Quote of the Day adapter, and Waveshare 7.5-inch V2 display output work today. Hardware enclosure and the Gmail/Codex/Claude adapters are in active development.
+> **Early prototype:** the deterministic renderer, weather, quote, Claude bridge, Codex, and Gmail unread adapters are ready. Gmail and Codex each require one explicit local sign-in before their first live use; hardware enclosure and the refresh service remain in development.
 
 ## What it will show
 
@@ -108,6 +108,29 @@ frame-one \
   --weather-timezone America/New_York \
   --display waveshare-7in5-v2
 ```
+
+### The remaining data blocks
+
+Claude is intentionally a manual bridge. Copy
+`samples/claude-bridge.example.json` to a private file on the Pi, replace the
+values from Claude's Usage screen, and pass it at render time:
+
+```sh
+frame-one --input ~/frame-one/samples/dashboard-state.json \
+  --output ~/frame-one/output/dashboard.png \
+  --claude-state ~/.config/frame-one/claude.json
+```
+
+Codex is read from the documented local App Server and never from browser
+cookies, the desktop app, or token files. Once Codex CLI is installed and
+signed in on the Pi, add `--live-codex` to a normal render command.
+
+Gmail reads only `messagesUnread` from the `INBOX` label. It accepts a local,
+read-only OAuth token using `--gmail-token ~/.config/frame-one/gmail.token.json`.
+The token file is intentionally ignored by Git. Google OAuth setup is a
+separate explicit step, because it requires creating your own Google Cloud OAuth
+client and approving access to your mailbox; Frame One never asks for Gmail
+message content.
 
 ## Verify
 

@@ -7,6 +7,9 @@ import json
 from pathlib import Path
 
 from .displays import display_image
+from .providers.claude import claude_provider_state
+from .providers.codex import CodexRateLimitProvider
+from .providers.gmail import GmailUnreadProvider
 from .providers.quotes import quote_provider_state
 from .providers.weather import OpenMeteoWeatherProvider, WeatherLocation
 from .renderer import render_dashboard
@@ -27,6 +30,9 @@ def main() -> None:
         help="Fetch and render the live Quote of the Day without storing it separately",
     )
     parser.add_argument("--live-weather", action="store_true", help="Fetch current weather from Open-Meteo")
+    parser.add_argument("--claude-state", type=Path, help="Manual Claude allowance bridge JSON")
+    parser.add_argument("--live-codex", action="store_true", help="Read allowance from the local Codex App Server")
+    parser.add_argument("--gmail-token", type=Path, help="Read Gmail INBOX count using this local OAuth token")
     parser.add_argument("--weather-latitude", type=float, help="Explicit weather location latitude")
     parser.add_argument("--weather-longitude", type=float, help="Explicit weather location longitude")
     parser.add_argument(
@@ -57,6 +63,24 @@ def main() -> None:
         # Keep the header's date and update stamp honest when live weather
         # replaces the sample state used as the rest of the dashboard's base.
         state["generated_at"] = weather_state["updated_at"]
+
+    if args.claude_state:
+        claude_state = claude_provider_state(args.claude_state)
+        if claude_state["state"] != "ok":
+            parser.error("Claude bridge unavailable; existing display was left untouched")
+        state["claude"] = claude_state
+
+    if args.live_codex:
+        codex_state = CodexRateLimitProvider().get()
+        if codex_state["state"] != "ok":
+            parser.error("Codex allowance unavailable; existing display was left untouched")
+        state["codex"] = codex_state
+
+    if args.gmail_token:
+        gmail_state = GmailUnreadProvider(args.gmail_token).get()
+        if gmail_state["state"] != "ok":
+            parser.error("Gmail unread count unavailable; existing display was left untouched")
+        state["gmail"] = gmail_state
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     image = render_dashboard(state)

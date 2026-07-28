@@ -110,9 +110,19 @@ Frame One fetches the quote when the daily dashboard refresh runs. It provides *
 - The screen's last-successful value may remain visible until its `stale_after_seconds` passes; then replace it with `—`.
 - Do not expose error messages, OAuth tokens, location coordinates, account email addresses, or stack traces on the e-paper panel.
 
+## Implementation status
+
+- Open-Meteo, ZenQuotes, the Claude manual bridge, the Codex App Server reader,
+  and the Gmail INBOX-label reader are implemented.
+- The Gmail reader requires a user-created, read-only OAuth token. Its initial
+  authorization ceremony and the Pi refresh scheduler are the next setup work.
+- The Codex reader requires Codex CLI plus its supported local ChatGPT sign-in
+  on the Pi; it invokes only `account/rateLimits/read` over stdio JSON-RPC.
+
 ## Build order
 
 1. Implement the shared state assembler and renderer using fixed sample data.
 2. Add Open-Meteo, then Gmail OAuth / unread metadata.
 3. Add the documented Codex App Server adapter, then the manual Claude bridge command.
-4. Revisit an automatic Claude adapter only when Anthropic publishes a supported source or the user explicitly chooses a supported integration.
+4. Complete the Gmail authorization ceremony and scheduled local updater.
+5. Revisit an automatic Claude adapter only when Anthropic publishes a supported source or the user explicitly chooses a supported integration.
