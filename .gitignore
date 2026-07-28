@@ -18,6 +18,9 @@ claude_creds.json
 *.pem
 *.key
 
+# Exported meshes are build output; the SCAD source is authoritative
+enclosure/stl/
+
 # Runtime markers written beside the rendered output
 .frame-one-state.json
 *.last-render

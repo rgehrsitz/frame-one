@@ -261,5 +261,12 @@ else if (part == "plinth_left")
     plinth_left();
 else if (part == "plinth_right")
     plinth_right();
-else
+else {
+    // Rendering the file as-opened gives the assembly, which is 200 mm wide and
+    // will not fit a 180 mm bed. Say so in the console rather than letting the
+    // slicer be the first thing that mentions it.
+    echo("NOTE: 'assembly' is a visual check only (200 x 139 mm) and is NOT printable.");
+    echo("Set `part` to one of: bezel_left, bezel_right, bezel_top, bezel_bottom,");
+    echo("rear_left, rear_right, plinth_left, plinth_right -- each fits the A1 mini.");
     assembly();
+}

@@ -27,11 +27,34 @@ top of the SCAD file if yours differs.
 
 ## Print and assemble
 
-Open the model in OpenSCAD and export each `part`: `bezel_left`, `bezel_right`,
-`bezel_top`, `bezel_bottom`, `rear_left`, `rear_right`, `plinth_left`, and
-`plinth_right`. The `assembly` selection is a visual check only; the finished
-object is deliberately wider than an A1 mini's 180 mm bed. Every printable
-module fits the A1 mini. Print the bezel rails face-down, the rear parts with
+**Do not export the file as it opens.** `part` defaults to `assembly`, which is
+a 200 × 139 mm visual check and will not fit a 180 mm bed — rendering it prints
+a reminder to the console. Set `part` first, via Window → Customizer or by
+editing the assignment near the top of the file, and export the eight modules
+one at a time. Every printable module fits the A1 mini:
+
+| Part | Footprint (mm) |
+| --- | --- |
+| `bezel_left`, `bezel_right` | 14.9 × 132.0 × 9.2 |
+| `bezel_top`, `bezel_bottom` | 164.2 × 16.5 × 3.2 |
+| `rear_left`, `rear_right` | 95.0 × 128.0 × 23.0 |
+| `plinth_left`, `plinth_right` | 100.0 × 46.8 × 16.0 laid flat |
+
+To export the whole set without clicking through the GUI:
+
+```sh
+for p in bezel_left bezel_right bezel_top bezel_bottom \
+         rear_left rear_right plinth_left plinth_right; do
+  openscad -D "part=\"$p\"" -o "stl/$p.stl" frame-one-desk-case.scad
+done
+```
+
+The parts are exported in the assembly's own frame, where **+Y is up and +Z is
+toward the back** — so the slicer will not always land them the right way up.
+The bezel rails arrive correctly, face-down on the bed. Rotate the rear halves
+180° so their outside face is on the bed, and rotate the plinth halves −90°
+about X so the desk face is down and the seating channel opens upward;
+otherwise the plinth imports standing 46.8 mm tall on a 16 mm-wide edge. Print the bezel rails face-down, the rear parts with
 their outside face on the bed, and the plinth halves on their underside (the
 face that meets the desk), which leaves the seating channel opening upward.
 
