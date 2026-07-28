@@ -199,7 +199,9 @@ Codex is read from the local App Server rather than from browser
 cookies, the desktop app, or token files. Once Codex CLI is installed and
 signed in on the Pi, add `--live-codex` to a normal render command.
 
-Gmail reads only `messagesUnread` from the `INBOX` label. First create a Google
+Gmail reads only `threadsUnread` from the `INBOX` label—the conversation count
+shown by the Gmail interface, without inflating the badge when one thread has
+multiple unread messages. First create a Google
 Cloud project, enable the Gmail API, configure its OAuth consent screen, and
 create a **Desktop** OAuth client. Download its JSON on the Pi to an ignored,
 owner-readable path such as `~/.config/frame-one/google-client.json`. The

@@ -58,7 +58,7 @@ Every provider returns this envelope to the renderer:
 
 **OAuth scope:** `https://www.googleapis.com/auth/gmail.readonly`.
 
-**Request:** `GET /gmail/v1/users/me/labels/INBOX`, then display `messagesUnread`. This reads label metadata only; it does not fetch subjects, senders, message bodies, attachments, or message IDs. Gmail documents both `messagesUnread` and `threadsUnread`; Frame One uses messages by default because its label is “UNREAD.”
+**Request:** `GET /gmail/v1/users/me/labels/INBOX`, then display `threadsUnread`. This reads label metadata only; it does not fetch subjects, senders, message bodies, attachments, or message IDs. Gmail documents both `messagesUnread` and `threadsUnread`; Frame One uses unread threads because that is the conversation count shown by Gmail's Inbox badge, while a thread can contain multiple unread messages.
 
 **Authorization:** the account owner creates a Google Desktop OAuth client, enables the Gmail API, then approves the `gmail.readonly` scope once through `frame-one-gmail-login`. The Pi receives the callback over an SSH loopback tunnel, so the browser login and the token exchange remain between the account owner and the local device.
 

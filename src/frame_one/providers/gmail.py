@@ -43,7 +43,10 @@ class GmailUnreadProvider:
             request = Request(GMAIL_INBOX_URL, headers={"Authorization": f"Bearer {token}"})
             with self._opener(request, timeout=10) as response:
                 label = json.loads(response.read().decode("utf-8"))
-            unread = label["messagesUnread"]
+            # Gmail's Inbox badge is a conversation count.  A thread can have
+            # more than one unread message, so messagesUnread would overstate
+            # the count shown in the Gmail interface.
+            unread = label["threadsUnread"]
             if isinstance(unread, bool) or int(unread) < 0:
                 raise ValueError("invalid unread count")
             return {"state": "ok", "data": {"unread": int(unread)}}

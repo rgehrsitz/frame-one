@@ -25,7 +25,7 @@ class FakeResponse:
 
 
 class GmailUnreadProviderTests(unittest.TestCase):
-    def test_reads_only_inbox_label_metadata(self) -> None:
+    def test_reads_the_inbox_unread_thread_count_not_message_count(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "gmail.token.json"
             path.write_text(json.dumps({"token": "access", "expiry": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()}))
@@ -33,11 +33,11 @@ class GmailUnreadProviderTests(unittest.TestCase):
             def opener(request: Request, **kwargs: object) -> FakeResponse:
                 self.assertEqual(request.full_url, "https://gmail.googleapis.com/gmail/v1/users/me/labels/INBOX")
                 self.assertEqual(request.get_header("Authorization"), "Bearer access")
-                return FakeResponse({"messagesUnread": 12})
+                return FakeResponse({"messagesUnread": 19, "threadsUnread": 15})
 
             state = GmailUnreadProvider(path, opener=opener).get()
 
-        self.assertEqual(state, {"state": "ok", "data": {"unread": 12}})
+        self.assertEqual(state, {"state": "ok", "data": {"unread": 15}})
 
     def test_refreshes_expired_access_token_without_logging_mail_data(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -59,12 +59,12 @@ class GmailUnreadProviderTests(unittest.TestCase):
                 if request.full_url == "https://oauth2.example/token":
                     return FakeResponse({"access_token": "fresh", "expires_in": 3600})
                 self.assertEqual(request.get_header("Authorization"), "Bearer fresh")
-                return FakeResponse({"messagesUnread": 3})
+                return FakeResponse({"messagesUnread": 3, "threadsUnread": 2})
 
             state = GmailUnreadProvider(path, opener=opener).get()
             stored = json.loads(path.read_text())
 
-        self.assertEqual(state, {"state": "ok", "data": {"unread": 3}})
+        self.assertEqual(state, {"state": "ok", "data": {"unread": 2}})
         self.assertEqual(stored["token"], "fresh")
 
     def test_bad_or_missing_token_is_unavailable(self) -> None:
