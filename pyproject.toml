@@ -12,6 +12,7 @@ dependencies = ["Pillow>=11.0"]
 [project.scripts]
 frame-one = "frame_one.cli:main"
 frame-one-claude-statusline = "frame_one.claude_statusline:main"
+frame-one-claude-login = "frame_one.claude_login:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

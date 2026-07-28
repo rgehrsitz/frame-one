@@ -41,7 +41,10 @@ class Provider:
 
     @property
     def available(self) -> bool:
-        return self.state == "ok"
+        # A "stale" provider is a value that was true at its last successful
+        # refresh and has not yet aged past its stale_after_seconds.  Showing it
+        # is not inventing a value; hiding it would blank a tile over a blip.
+        return self.state in ("ok", "stale")
 
 
 def _font_candidates(kind: str) -> list[Path]:
