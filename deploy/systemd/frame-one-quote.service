@@ -1,0 +1,25 @@
+[Unit]
+Description=Refresh Frame One with the daily quote
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/home/rgehrsitz/frame-one/.venv/bin/frame-one
+ConditionPathExists=/home/rgehrsitz/.config/frame-one/dashboard.env
+
+[Service]
+Type=oneshot
+User=rgehrsitz
+Group=rgehrsitz
+WorkingDirectory=/home/rgehrsitz/frame-one
+Environment=HOME=/home/rgehrsitz
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=FRAME_ONE_ROOT=/home/rgehrsitz/frame-one
+Environment=FRAME_ONE_CONFIG_DIR=/home/rgehrsitz/.config/frame-one
+EnvironmentFile=/home/rgehrsitz/.config/frame-one/dashboard.env
+TimeoutStartSec=5min
+# Wait for the five-minute refresh, if it landed at 2:00 exactly, so the quote
+# update always runs and the Waveshare panel is never driven concurrently.
+ExecStart=/usr/bin/flock -w 180 /home/rgehrsitz/.config/frame-one/refresh.lock /home/rgehrsitz/frame-one/scripts/refresh-dashboard.sh --live-quote
+
+[Install]
+WantedBy=multi-user.target

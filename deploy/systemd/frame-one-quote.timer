@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Frame One daily quote refresh at 2 AM
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+AccuracySec=1s
+Unit=frame-one-quote.service
+
+[Install]
+WantedBy=timers.target

@@ -102,6 +102,38 @@ PYTHONPATH=src python3 -m frame_one.cli \
 
 There is deliberately no quote cache, bundled quote list, fallback, or sidecar JSON. A failed or unsuitable quote leaves the quote area quiet while the rest of the screen still refreshes. ZenQuotes attribution belongs in the eventual local setup/about page.
 
+### Automatic Pi refresh
+
+The supplied systemd units make the Pi self-starting: weather, Claude, Codex,
+and Gmail refresh every five minutes, while a separate run at 2:00 AM local
+time also fetches the daily quote. Both use the same lock, so the e-paper panel
+is never driven by two refreshes at once. The system timer is persistent, so a
+missed run is made up once after a reboot when the network becomes available.
+
+Set the location as explicit coordinates—never a street address—in the local,
+owner-readable configuration file:
+
+```sh
+install -d -m 700 ~/.config/frame-one
+install -m 600 deploy/systemd/dashboard.env.example ~/.config/frame-one/dashboard.env
+# Edit WEATHER_LATITUDE, WEATHER_LONGITUDE, and WEATHER_TIMEZONE as needed.
+```
+
+Install and enable the boot-persistent units:
+
+```sh
+sudo install -m 644 deploy/systemd/frame-one-refresh.service /etc/systemd/system/
+sudo install -m 644 deploy/systemd/frame-one-refresh.timer /etc/systemd/system/
+sudo install -m 644 deploy/systemd/frame-one-quote.service /etc/systemd/system/
+sudo install -m 644 deploy/systemd/frame-one-quote.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now frame-one-refresh.timer frame-one-quote.timer
+systemctl list-timers 'frame-one-*'
+```
+
+The five-minute timer starts about 30 seconds after boot, then continues on
+five-minute wall-clock boundaries.
+
 ### Live weather
 
 Open-Meteo needs no account or key for this personal dashboard. Provide an
