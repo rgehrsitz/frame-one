@@ -24,7 +24,7 @@ ASSET_FONT_DIR = Path(__file__).parent / "assets" / "fonts"
 # needs enough headroom for Pillow/FreeType metric differences between macOS
 # and the Raspberry Pi, so do not increase them without checking that margin.
 FORECAST_LABEL_SIZE = 20
-FORECAST_VALUE_SIZE = 14
+FORECAST_VALUE_SIZE = 13
 FORECAST_GAP = 6
 FORECAST_HORIZONTAL_PADDING = 18
 
