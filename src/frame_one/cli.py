@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .displays import display_image
 from .providers.quotes import quote_provider_state
+from .providers.weather import OpenMeteoWeatherProvider, WeatherLocation
 from .renderer import render_dashboard
 
 
@@ -25,6 +26,14 @@ def main() -> None:
         action="store_true",
         help="Fetch and render the live Quote of the Day without storing it separately",
     )
+    parser.add_argument("--live-weather", action="store_true", help="Fetch current weather from Open-Meteo")
+    parser.add_argument("--weather-latitude", type=float, help="Explicit weather location latitude")
+    parser.add_argument("--weather-longitude", type=float, help="Explicit weather location longitude")
+    parser.add_argument(
+        "--weather-timezone",
+        default="America/New_York",
+        help="IANA timezone used for the forecast (default: America/New_York)",
+    )
     args = parser.parse_args()
 
     with args.input.open("r", encoding="utf-8") as state_file:
@@ -35,6 +44,19 @@ def main() -> None:
         if quote_state["state"] != "ok":
             parser.error("live quote unavailable; existing display was left untouched")
         state["quote"] = quote_state
+
+    if args.live_weather:
+        if args.weather_latitude is None or args.weather_longitude is None:
+            parser.error("--live-weather requires --weather-latitude and --weather-longitude")
+        weather_state = OpenMeteoWeatherProvider(
+            WeatherLocation(args.weather_latitude, args.weather_longitude, args.weather_timezone)
+        ).get()
+        if weather_state["state"] != "ok":
+            parser.error("live weather unavailable; existing display was left untouched")
+        state["weather"] = weather_state
+        # Keep the header's date and update stamp honest when live weather
+        # replaces the sample state used as the rest of the dashboard's base.
+        state["generated_at"] = weather_state["updated_at"]
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     image = render_dashboard(state)
