@@ -28,6 +28,7 @@ STALE_AFTER_SECONDS: dict[str, int] = {
     "gmail": 1800,  # 15-minute refresh
     "codex": 3600,  # 15-minute refresh
     "claude": 10800,  # status-line capture: only appears while you are working
+    "quote": 172800,  # retain the daily quote across a missed overnight fetch
 }
 
 # The OAuth reader is polled every round, so a value older than a few rounds

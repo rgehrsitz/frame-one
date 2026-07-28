@@ -22,7 +22,6 @@ from .refresh import (
     LOCAL_FILE,
     NETWORK,
     StateCache,
-    fetch_with_retry,
     is_due,
     resolve,
 )
@@ -162,13 +161,18 @@ def main() -> None:
             ),
         )
 
-    # The quote is deliberately excluded from the cache: DATA_SOURCES.md keeps it
-    # live-only, with no stored or substituted quote.  It simply goes quiet.
     if args.live_quote:
         live_sources = True
         state["quote"] = _report(
-            "quote", fetch_with_retry(quote_provider_state, policy=NETWORK, deadline=deadline)
+            "quote", resolve("quote", quote_provider_state, cache=cache, now=now, policy=NETWORK, deadline=deadline)
         )
+    elif live_sources:
+        # The daily quote is fetched at 2 AM, then kept in the existing local
+        # state cache so ordinary five-minute renders do not restore the sample
+        # placeholder.  It expires after two days if the daily source is down.
+        cached_quote = cache.recall("quote", now)
+        if cached_quote is not None:
+            state["quote"] = cached_quote
 
     cache.save()
 

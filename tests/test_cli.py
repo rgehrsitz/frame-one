@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import copy
 import json
 from pathlib import Path
 import sys
@@ -122,6 +123,48 @@ class LiveRefreshTests(unittest.TestCase):
             cli._last_render(self.output.with_name(f".{self.output.name}.last-render")),
             datetime.fromisoformat("2026-07-28T12:05:00-04:00"),
         )
+
+    def test_normal_live_poll_reuses_the_daily_quote_from_the_existing_state_cache(self) -> None:
+        rendered_states: list[dict[str, object]] = []
+
+        def render(state: dict[str, object]) -> Image.Image:
+            rendered_states.append(copy.deepcopy(state))
+            return Image.new("1", (8, 8), 1)
+
+        common_args = [
+            "frame-one",
+            "--input",
+            str(self.input),
+            "--output",
+            str(self.output),
+            "--state-cache",
+            str(self.directory / "state.json"),
+            "--gmail-token",
+            str(self.directory / "gmail.token.json"),
+        ]
+        quote = {"state": "ok", "data": {"text": "Stay curious.", "attribution": "— Ada"}}
+
+        with (
+            mock.patch.object(cli, "GmailUnreadProvider") as gmail,
+            mock.patch.object(cli, "quote_provider_state", return_value=quote),
+            mock.patch.object(cli, "render_dashboard", side_effect=render),
+            mock.patch.object(sys, "argv", [*common_args, "--live-quote"]),
+        ):
+            gmail.return_value.get.return_value = {"state": "ok", "data": {"unread": 15}}
+            cli.main()
+
+        with (
+            mock.patch.object(cli, "GmailUnreadProvider") as gmail,
+            mock.patch.object(cli, "render_dashboard", side_effect=render),
+            mock.patch.object(sys, "argv", common_args),
+        ):
+            gmail.return_value.get.return_value = {"state": "ok", "data": {"unread": 15}}
+            cli.main()
+
+        cached_quote = rendered_states[-1]["quote"]
+        self.assertEqual(cached_quote["state"], "stale")
+        self.assertEqual(cached_quote["data"], quote["data"])
+        self.assertEqual(cached_quote["stale_after_seconds"], 172800)
 
 
 class RenderMarkerTests(unittest.TestCase):

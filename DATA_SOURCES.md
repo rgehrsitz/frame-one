@@ -118,7 +118,13 @@ References: [Codex App Server API overview](https://learn.chatgpt.com/docs/app-s
 
 **Provider:** [ZenQuotes' daily endpoint](https://docs.zenquotes.io/zenquotes-documentation/). It needs no API key at this scale and provides one daily quote.
 
-Frame One fetches the quote when the daily dashboard refresh runs. It provides **no bundled collection, local cache, recent-quote list, or fallback quote**. The adapter accepts only a short quote with an author; an unsuitable or unreachable response is `unavailable`. The quote is the one provider excluded from the last-known-good cache described below, so an outage simply leaves the quote area quiet — it no longer holds back the rest of the screen. Include the required `Quotes: ZenQuotes.io` attribution in the local setup/about screen.
+Frame One fetches the quote during the 2:00 AM dashboard refresh. The adapter
+accepts only a short quote with an author; an unsuitable or unreachable response
+is `unavailable`. A successful daily quote is kept in the existing local
+last-known-good state cache for up to two days, so normal five-minute renders do
+not restore the sample placeholder. There is no bundled collection, recent-quote
+list, or separate quote file. Include the required `Quotes: ZenQuotes.io`
+attribution in the local setup/about screen.
 
 ## Refresh and failure policy
 

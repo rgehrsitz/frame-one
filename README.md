@@ -100,7 +100,11 @@ PYTHONPATH=src python3 -m frame_one.cli \
   --live-quote
 ```
 
-There is deliberately no quote cache, bundled quote list, fallback, or sidecar JSON. A failed or unsuitable quote leaves the quote area quiet while the rest of the screen still refreshes. ZenQuotes attribution belongs in the eventual local setup/about page.
+Frame One stores an accepted daily quote in the same local state cache used for
+the other dashboard values, so a normal refresh does not restore the sample
+placeholder. It expires after two days if the 2:00 AM fetch cannot recover; no
+bundled quote list or separate quote file exists. ZenQuotes attribution belongs
+in the eventual local setup/about page.
 
 ### Automatic Pi refresh
 
