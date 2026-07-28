@@ -25,7 +25,7 @@ The status grid has three equal columns: `x: 0–267`, `267–534`, and `534–8
 - **Supporting labels:** IBM Plex Mono Medium. Its mechanical, measured character supports the instrument-panel feeling and keeps reset times easy to scan.
 - **Quote:** IBM Plex Serif Italic. This is the sole human, editorial note in an otherwise utilitarian screen.
 
-For the production renderer, bundle the font files with the app rather than relying on a network request.
+The production renderer bundles these open-source font files with the app rather than relying on a network request. Their license files live beside the font assets.
 
 | Role | Font / size |
 | --- | --- |

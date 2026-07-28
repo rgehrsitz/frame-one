@@ -49,6 +49,12 @@ PYTHONPATH=src python3 -m frame_one.cli \
 
 The result is a strict 1-bit 800 × 480 PNG suitable for the target panel.
 
+Frame One bundles Barlow Condensed SemiBold, IBM Plex Mono Medium, and IBM Plex
+Serif Italic so the dashboard looks the same on the Pi and on a development
+computer. Their license files live in `src/frame_one/assets/fonts/`. Set
+`FRAME_ONE_DISPLAY_FONT`, `FRAME_ONE_MONO_FONT`, or `FRAME_ONE_SERIF_FONT` only
+to intentionally override those defaults.
+
 ### Show it on the Waveshare panel
 
 Frame One supports the monochrome 800 × 480 Waveshare 7.5-inch V2 panel through

@@ -18,6 +18,7 @@ HEADER_BOTTOM = 92
 FORECAST_BOTTOM = 140
 STATUS_BOTTOM = 410
 COLUMN_BREAKS = (0, 267, 534, 800)
+ASSET_FONT_DIR = Path(__file__).parent / "assets" / "fonts"
 
 
 @dataclass(frozen=True)
@@ -48,14 +49,17 @@ def _font_candidates(kind: str) -> list[Path]:
     candidates.extend(
         {
             "display": [
+                ASSET_FONT_DIR / "BarlowCondensed-SemiBold.ttf",
                 Path("/System/Library/Fonts/Supplemental/DIN Condensed Bold.ttf"),
                 Path("/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf"),
             ],
             "mono": [
+                ASSET_FONT_DIR / "IBMPlexMono-Medium.ttf",
                 Path("/System/Library/Fonts/SFNSMono.ttf"),
                 Path("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"),
             ],
             "serif": [
+                ASSET_FONT_DIR / "IBMPlexSerif-Italic.ttf",
                 Path("/System/Library/Fonts/Supplemental/PTSerif.ttc"),
                 Path("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf"),
             ],
