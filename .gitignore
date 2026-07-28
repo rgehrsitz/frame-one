@@ -12,5 +12,6 @@ output/
 secrets/
 *.token.json
 credentials.json
+claude-status.json
 *.pem
 *.key

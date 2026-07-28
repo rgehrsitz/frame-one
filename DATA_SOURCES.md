@@ -4,7 +4,7 @@
 
 Frame One is **local-first**. The Raspberry Pi fetches and renders only the small set of values needed for the screen; it does not send dashboard data to a separate cloud service and it never stores email contents, prompts, repositories, or agent transcripts.
 
-The first release has three automated providers (weather, Gmail, and Codex) and one deliberately optional usage provider (Claude). Claude's consumer-subscription meter is not a public developer API, so the project must not scrape private web endpoints or rely on undocumented application storage.
+The first release has four automated providers (weather, Gmail, Codex, and Claude). Claude's consumer-subscription meter is not a public developer API, so the project must not scrape private web endpoints or rely on undocumented application storage. Instead, it consumes Claude Code's documented local status-line data contract.
 
 ## Common provider contract
 
@@ -28,7 +28,7 @@ Every provider returns this envelope to the renderer:
 | --- | --- | --- | --- |
 | Weather | Open-Meteo Forecast API | Automated, no account | Hourly |
 | Gmail unread | Gmail API label metadata | Automated, OAuth read-only | Every 15 min |
-| Claude allowance | Claude Settings > Usage | Opt-in bridge; no scraping | Manual or 15 min when a supported source exists |
+| Claude allowance | Claude Code status-line contract | Automated, local, no scraping | Event-driven; copied to Pi at most every 15 min |
 | Codex allowance | Codex App Server | Automated after local ChatGPT sign-in | Every 15 min and on change |
 | Quote | ZenQuotes daily endpoint | Automated, live-only | Daily |
 
@@ -62,24 +62,31 @@ Every provider returns this envelope to the renderer:
 
 ### 3. Claude allowance
 
-Claude's paid plans have a five-hour session limit and a weekly limit, with the reset information exposed in **Settings > Usage**. Anthropic documents those consumer-plan concepts, but not a public API that a personal dashboard can use to retrieve the remaining percentages and resets automatically.
+Claude's paid plans expose five-hour and weekly limits. Claude Code's documented status-line contract includes `rate_limits.five_hour` and `rate_limits.seven_day` for Claude.ai Pro/Max subscribers after the first response in a session. Each window supplies `used_percentage` and a Unix `resets_at` timestamp.
 
 **Decision:** do not scrape Claude's web UI, browser session, cookies, or private endpoints.
 
-**First-release bridge:** a tiny local `frame-one set claude` command accepts only:
+**Automatic collector:** a small status-line command receives the local JSON event and reduces it to only the following state:
 
 ```json
 {
-  "five_hour_percent_remaining": 63,
-  "five_hour_resets_at": "2026-07-25T14:15:00-04:00",
-  "week_percent_remaining": 81,
-  "week_resets_at": "2026-07-28T00:00:00-04:00"
+  "source": "claude-code-statusline",
+  "rate_limits": {
+    "five_hour": {
+      "percent_remaining": 63,
+      "resets_at": "2026-07-25T14:15:00-04:00"
+    },
+    "seven_day": {
+      "percent_remaining": 81,
+      "resets_at": "2026-07-28T00:00:00-04:00"
+    }
+  }
 }
 ```
 
-This is intentionally manual at first. A future automatic adapter is acceptable only if Anthropic publishes a supported API or a stable, user-authorized local interface. The UI supports `—` for any unavailable meter.
+The collector performs no Claude request and stores no prompt, transcript, workspace, account identifier, or credential. It can use a dedicated SSH key to copy this tiny snapshot to the Pi at most once every 15 minutes. The key authenticates only to the Pi; it is unrelated to Claude. The UI supports `—` for any unavailable meter.
 
-References: [Claude Pro plan limits](https://support.claude.com/en/articles/8325606-what-is-the-pro-plan) and [Claude usage credits](https://support.claude.com/en/articles/12429409-manage-usage-credits-for-paid-claude-plans).
+References: [Claude Code status-line contract](https://code.claude.com/docs/en/statusline) and [Use Claude Code with a Pro or Max plan](https://support.claude.com/en/articles/11145838-use-claude-code-with-your-pro-or-max-plan).
 
 ### 4. Codex allowance
 
@@ -91,7 +98,7 @@ Codex usage is plan-dependent and can be shared with other agentic features. For
 
 **Screen mapping:** map the returned rate-limit windows to the two Codex lines in the UI. Preserve the server-provided labels and reset times rather than assuming a fixed five-hour or weekly model. The secondary reset must include its calendar date as well as its time. If the account does not expose a secondary window, show `WEEK —`.
 
-**Fallback:** if a plan does not return a dashboard-suitable window, show `—` and retain the optional manual bridge. Never calculate a remaining allowance from task counts or token estimates.
+**Fallback:** if a plan does not return a dashboard-suitable window, show `—`. Never calculate a remaining allowance from task counts or token estimates.
 
 References: [Codex App Server API overview](https://learn.chatgpt.com/docs/app-server#api-overview-1), [Using Codex with a ChatGPT plan](https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan), and [Codex rate card](https://help.openai.com/en/articles/20001106-codex-rate-card).
 
@@ -112,7 +119,7 @@ Frame One fetches the quote when the daily dashboard refresh runs. It provides *
 
 ## Implementation status
 
-- Open-Meteo, ZenQuotes, the Claude manual bridge, the Codex App Server reader,
+- Open-Meteo, ZenQuotes, the Claude Code status-line collector, the Codex App Server reader,
   and the Gmail INBOX-label reader are implemented.
 - The Gmail reader requires a user-created, read-only OAuth token. Its initial
   authorization ceremony and the Pi refresh scheduler are the next setup work.
@@ -123,6 +130,6 @@ Frame One fetches the quote when the daily dashboard refresh runs. It provides *
 
 1. Implement the shared state assembler and renderer using fixed sample data.
 2. Add Open-Meteo, then Gmail OAuth / unread metadata.
-3. Add the documented Codex App Server adapter, then the manual Claude bridge command.
+3. Add the documented Codex App Server adapter, then the Claude Code status-line collector.
 4. Complete the Gmail authorization ceremony and scheduled local updater.
-5. Revisit an automatic Claude adapter only when Anthropic publishes a supported source or the user explicitly chooses a supported integration.
+5. Complete the Pi refresh scheduler and one-time SSH key setup for the Claude snapshot transport.

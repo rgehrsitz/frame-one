@@ -4,12 +4,12 @@
 
 Frame One turns a Raspberry Pi Zero 2 W and a 7.5-inch Waveshare e-paper panel into a long, low dashboard for weather, AI allowance, Gmail unread count, and one daily quote. It is designed for slow, deliberate updates—not a constantly moving screen.
 
-> **Early prototype:** the deterministic renderer, weather, quote, Claude bridge, Codex, and Gmail unread adapters are ready. Gmail and Codex each require one explicit local sign-in before their first live use; hardware enclosure and the refresh service remain in development.
+> **Early prototype:** the deterministic renderer, weather, quote, automatic Claude Code allowance capture, Codex, and Gmail unread adapters are ready. Gmail and Codex each require one explicit local sign-in before their first live use; hardware enclosure and the refresh service remain in development.
 
 ## What it will show
 
 - Current conditions and a Today / Tonight / Tomorrow forecast
-- Claude five-hour and weekly allowance (manual bridge until a supported API exists)
+- Claude five-hour and weekly allowance from its documented Claude Code status-line contract
 - Codex rate-limit windows through the documented local App Server
 - Gmail unread count only—never subjects or message content
 - One live Quote of the Day
@@ -109,16 +109,41 @@ frame-one \
   --display waveshare-7in5-v2
 ```
 
-### The remaining data blocks
+### Claude allowance (automatic)
 
-Claude is intentionally a manual bridge. Copy
-`samples/claude-bridge.example.json` to a private file on the Pi, replace the
-values from Claude's Usage screen, and pass it at render time:
+Frame One uses Claude Code's documented **status-line** `rate_limits` object.
+After an ordinary Claude Code response, it provides the five-hour and seven-day
+usage percentages plus their exact reset timestamps. The collector preserves
+only those four values—never a prompt, transcript, repository name, account
+identifier, or credential.
+
+Install this repository on the Mac where you normally use Claude Code, then add
+the command below as Claude Code's `statusLine.command`. If you already use a
+custom status line, call this collector from that wrapper rather than replacing
+your existing command.
+
+```sh
+python3 -m pip install -e ~/frame-one
+```
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "frame-one-claude-statusline --output ~/.config/frame-one/claude-status.json --timezone America/New_York --sync-to YOUR_PI_USER@frame-one.local:~/.config/frame-one/claude-status.json --identity-file ~/.ssh/frame-one-pi"
+  }
+}
+```
+
+The optional `--sync-to` copies the tiny snapshot to the Pi only after a
+successful Claude response and no more than once every 15 minutes. It needs a
+one-time, passwordless SSH key setup; it never copies the Claude credential.
+Then the Pi's normal render command reads the automatically generated file:
 
 ```sh
 frame-one --input ~/frame-one/samples/dashboard-state.json \
   --output ~/frame-one/output/dashboard.png \
-  --claude-state ~/.config/frame-one/claude.json
+  --claude-status-file ~/.config/frame-one/claude-status.json
 ```
 
 Codex is read from the documented local App Server and never from browser
@@ -142,8 +167,8 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 
 - The Pi fetches only values necessary for the screen.
 - Gmail uses read-only label metadata; no messages, senders, subjects, or bodies are displayed or logged.
-- Claude and Codex are never scraped. Each uses only a supported integration or a deliberate manual bridge.
-- Credentials stay on the Pi and are never committed. `.gitignore` excludes local secrets and generated dashboard output.
+- Claude and Codex are never scraped. Each uses only a supported local integration.
+- Credentials stay on their local source device and are never committed. `.gitignore` excludes local secrets and generated dashboard output.
 
 ## Attribution
 
