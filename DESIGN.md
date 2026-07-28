@@ -25,6 +25,15 @@ The status grid has three equal columns: `x: 0–267`, `267–534`, and `534–8
 - **Supporting labels:** IBM Plex Mono Medium. Its mechanical, measured character supports the instrument-panel feeling and keeps reset times easy to scan.
 - **Quote:** IBM Plex Serif Italic. This is the sole human, editorial note in an otherwise utilitarian screen.
 
+### Weather marks
+
+The header uses four bespoke monochrome instrument marks: clear, partly cloudy,
+cloudy, and rain. They are drawn from simple circles, arcs, and 2-pixel lines
+inside the renderer rather than supplied by emoji, an icon font, or an external
+asset. This keeps them crisp and dependable on a 1-bit panel. The partly-cloudy
+mark uses a rayless sun behind one clean cloud silhouette: the symbol must be
+legible at a glance, not illustrate the whole sky.
+
 The production renderer bundles these open-source font files with the app rather than relying on a network request. Their license files live beside the font assets.
 
 | Role | Font / size |

@@ -16,6 +16,7 @@ from frame_one.renderer import (
     FORECAST_VALUE_SIZE,
     _font,
     _text_width,
+    _weather_mark,
 )
 
 
@@ -54,6 +55,12 @@ class RendererTests(unittest.TestCase):
         # The previous 15 px value font left only one pixel locally, which
         # failed on the Pi.  Preserve a meaningful buffer, not just a fit.
         self.assertLessEqual(content_width, available_width - 18)
+
+    def test_weather_marks_draw_crisp_ink_for_each_supported_condition(self) -> None:
+        for condition in ("clear", "partly_cloudy", "cloudy", "rain"):
+            image = Image.new("1", (48, 48), 1)
+            _weather_mark(ImageDraw.Draw(image), 4, 4, condition)
+            self.assertIn(0, image.getdata(), condition)
 
 
 if __name__ == "__main__":

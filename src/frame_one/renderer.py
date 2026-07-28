@@ -154,17 +154,34 @@ def _format_reset_date(value: Any) -> str:
 
 
 def _weather_mark(draw: ImageDraw.ImageDraw, x: int, y: int, code: str) -> None:
-    """Draw a small weather mark without relying on emoji glyph support."""
-    if code in {"clear", "partly_cloudy"}:
-        draw.ellipse((x + 5, y, x + 19, y + 14), outline=INK, width=2)
-        for dx, dy in ((12, -5), (12, 19), (-1, 7), (25, 7)):
-            _line(draw, (x + dx, y + dy, x + dx + (0 if dx == 12 else 3), y + dy + (3 if dx == 12 else 0)))
-    if code in {"cloudy", "partly_cloudy", "rain"}:
-        draw.arc((x + 7, y + 8, x + 22, y + 23), 180, 360, fill=INK, width=2)
-        draw.arc((x + 16, y + 5, x + 31, y + 23), 180, 360, fill=INK, width=2)
-        _line(draw, (x + 6, y + 23, x + 33, y + 23))
+    """Draw Frame One's compact, 1-bit weather instrument marks.
+
+    They are deliberately drawn here, rather than imported as emoji or a font,
+    so their stroke weight remains clear and consistent on the e-paper panel.
+    """
+
+    def cloud(cloud_y: int) -> None:
+        """One silhouette, avoiding fussy overlapping curves at this scale."""
+        draw.ellipse((x + 4, cloud_y + 9, x + 18, cloud_y + 22), fill=INK)
+        draw.ellipse((x + 11, cloud_y + 3, x + 27, cloud_y + 22), fill=INK)
+        draw.ellipse((x + 23, cloud_y + 10, x + 35, cloud_y + 22), fill=INK)
+        draw.rectangle((x + 10, cloud_y + 15, x + 29, cloud_y + 22), fill=INK)
+
+    if code == "clear":
+        draw.ellipse((x + 11, y + 7, x + 23, y + 19), outline=INK, width=2)
+        _line(draw, (x + 17, y + 1, x + 17, y + 4))
+        _line(draw, (x + 17, y + 22, x + 17, y + 25))
+        _line(draw, (x + 5, y + 13, x + 8, y + 13))
+        _line(draw, (x + 26, y + 13, x + 29, y + 13))
+    elif code == "partly_cloudy":
+        # The sun is deliberately rayless here: at 28 px, rays compete with
+        # the cloud and make the mark harder to parse at a glance.
+        draw.ellipse((x + 7, y + 3, x + 19, y + 15), outline=INK, width=2)
+        cloud(y + 5)
+    else:
+        cloud(y + 3)
     if code == "rain":
-        for dx in (12, 20, 28):
+        for dx in (11, 19, 27):
             _line(draw, (x + dx, y + 27, x + dx - 2, y + 31))
 
 
