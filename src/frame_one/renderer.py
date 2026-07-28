@@ -151,6 +151,33 @@ def _weather_mark(draw: ImageDraw.ImageDraw, x: int, y: int, code: str) -> None:
             _line(draw, (x + dx, y + 27, x + dx - 2, y + 31))
 
 
+def _render_forecast_item(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    label: str,
+    value: str,
+) -> None:
+    """Render a forecast label/value pair without shrinking one column's type."""
+    left, top, right, bottom = box
+    label_font = _font("display", 20)
+    value_font = _font("mono", 15)
+    gap = 8
+    label_width = _text_width(draw, label, label_font)
+    value_width = _text_width(draw, value, value_font)
+    content_width = label_width + gap + value_width
+    if content_width > right - left - 18:
+        raise ValueError(f"Forecast item is too wide for its column: {label} {value}")
+    x = left + (right - left - content_width) // 2
+    label_box = draw.textbbox((0, 0), label, font=label_font)
+    value_box = draw.textbbox((0, 0), value, font=value_font)
+    label_height = label_box[3] - label_box[1]
+    value_height = value_box[3] - value_box[1]
+    label_y = top + (bottom - top - label_height) // 2
+    value_y = top + (bottom - top - value_height) // 2
+    _left(draw, x, label_y, label, label_font)
+    _left(draw, x + label_width + gap, value_y, value, value_font)
+
+
 def _render_usage_column(
     draw: ImageDraw.ImageDraw,
     box: tuple[int, int, int, int],
@@ -212,14 +239,18 @@ def render_dashboard(state: Mapping[str, Any]) -> Image.Image:
     _line(draw, (0, STATUS_BOTTOM, 800, STATUS_BOTTOM))
 
     forecast_items = (
-        f"TODAY  {_provider_data(weather, 'today_high_f', '—')}° / {_provider_data(weather, 'today_low_f', '—')}°",
-        f"TONIGHT  {_provider_data(weather, 'tonight_low_f', '—')}° · {_provider_data(weather, 'tonight_rain_percent', '—')}% RAIN",
-        f"TOMORROW  {_provider_data(weather, 'tomorrow_high_f', '—')}° / {_provider_data(weather, 'tomorrow_low_f', '—')}° · {_provider_data(weather, 'tomorrow_rain_percent', '—')}% RAIN",
+        ("TODAY", f"{_provider_data(weather, 'today_high_f', '—')}°/{_provider_data(weather, 'today_low_f', '—')}°"),
+        ("TONIGHT", f"{_provider_data(weather, 'tonight_low_f', '—')}° · RAIN {_provider_data(weather, 'tonight_rain_percent', '—')}%"),
+        ("TOMORROW", f"{_provider_data(weather, 'tomorrow_high_f', '—')}°/{_provider_data(weather, 'tomorrow_low_f', '—')}° · RAIN {_provider_data(weather, 'tomorrow_rain_percent', '—')}%"),
     )
-    for index, text in enumerate(forecast_items):
+    for index, (label, value) in enumerate(forecast_items):
         left, right = COLUMN_BREAKS[index], COLUMN_BREAKS[index + 1]
-        font = _fit_font(draw, "mono", text, 18, right - left - 18)
-        _centered(draw, (left, HEADER_BOTTOM, right, FORECAST_BOTTOM), text, font)
+        _render_forecast_item(
+            draw,
+            (left, HEADER_BOTTOM, right, FORECAST_BOTTOM),
+            label,
+            value,
+        )
 
     _render_usage_column(draw, (0, FORECAST_BOTTOM, 267, STATUS_BOTTOM), "CLAUDE", claude)
     _render_usage_column(draw, (267, FORECAST_BOTTOM, 534, STATUS_BOTTOM), "CODEX", codex)
