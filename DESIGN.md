@@ -42,8 +42,9 @@ The production renderer bundles these open-source font files with the app rather
 | Header date / weather | Barlow Condensed SemiBold, 28 px |
 | Forecast item | IBM Plex Mono Medium, 18 px |
 | Column heading | Barlow Condensed SemiBold, 38 px |
-| Usage value / unread count | Barlow Condensed SemiBold, 90–104 px |
-| Usage label / reset time | IBM Plex Mono Medium, 17–19 px |
+| Usage value / unread count | Barlow Condensed SemiBold, 80 px |
+| Primary usage label | Barlow Condensed SemiBold, 24 px |
+| Reset detail | IBM Plex Mono Medium, 14 px |
 | Quote / attribution | IBM Plex Serif Italic 20 px / IBM Plex Mono Medium 16 px |
 
 ## Color

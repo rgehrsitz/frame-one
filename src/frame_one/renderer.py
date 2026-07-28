@@ -28,6 +28,16 @@ FORECAST_VALUE_SIZE = 13
 FORECAST_GAP = 6
 FORECAST_HORIZONTAL_PADDING = 18
 
+# Each status tile uses the same compact hierarchy: a heading, a short label,
+# then the primary metric.  Keep these shared so Gmail cannot gradually drift
+# away from the allowance columns.
+STATUS_TITLE_BOX = (18, 62)
+STATUS_PRIMARY_LABEL_BOX = (62, 88)
+STATUS_PRIMARY_VALUE_BOX = (84, 160)
+STATUS_TITLE_SIZE = 36
+STATUS_PRIMARY_LABEL_SIZE = 24
+STATUS_PRIMARY_VALUE_SIZE = 80
+
 
 @dataclass(frozen=True)
 class Provider:
@@ -222,10 +232,10 @@ def _render_claude_column(
     """Render Claude's two deliberate, independently-resetting allowances."""
     left, top, right, bottom = box
     width = right - left
-    title_font = _fit_font(draw, "display", "CLAUDE", 36, width - 32)
-    window_font = _fit_font(draw, "display", "5-HOUR LEFT", 24, width - 32)
+    title_font = _fit_font(draw, "display", "CLAUDE", STATUS_TITLE_SIZE, width - 32)
+    window_font = _fit_font(draw, "display", "5-HOUR LEFT", STATUS_PRIMARY_LABEL_SIZE, width - 32)
     value = _percent(_provider_data(provider, "percent_remaining"))
-    value_font = _fit_font(draw, "display", value, 80, width - 28)
+    value_font = _fit_font(draw, "display", value, STATUS_PRIMARY_VALUE_SIZE, width - 28)
     detail_label_font = _fit_font(draw, "display", "5-HOUR RESETS", 16, width - 52)
     detail_value_font = _fit_font(draw, "mono", "12:00 AM", 14, width - 52)
     weekly_reset_font = _fit_font(draw, "display", "RESETS MON, AUG 3 · 12:00 AM", 18, width - 28)
@@ -234,9 +244,19 @@ def _render_claude_column(
     secondary_reset_at = _provider_data(provider, "secondary_resets_at")
     secondary_reset = _format_reset_date_time(secondary_reset_at)
 
-    _centered(draw, (left, top + 18, right, top + 62), "CLAUDE", title_font)
-    _centered(draw, (left, top + 62, right, top + 88), "5-HOUR LEFT", window_font)
-    _centered(draw, (left, top + 84, right, top + 160), value, value_font)
+    _centered(draw, (left, top + STATUS_TITLE_BOX[0], right, top + STATUS_TITLE_BOX[1]), "CLAUDE", title_font)
+    _centered(
+        draw,
+        (left, top + STATUS_PRIMARY_LABEL_BOX[0], right, top + STATUS_PRIMARY_LABEL_BOX[1]),
+        "5-HOUR LEFT",
+        window_font,
+    )
+    _centered(
+        draw,
+        (left, top + STATUS_PRIMARY_VALUE_BOX[0], right, top + STATUS_PRIMARY_VALUE_BOX[1]),
+        value,
+        value_font,
+    )
     _left(draw, left + 26, bottom - 92, "5-HOUR RESETS", detail_label_font)
     _right(draw, right - 26, bottom - 92, primary_reset, detail_value_font)
     _left(draw, left + 26, bottom - 61, "WEEK LEFT", detail_label_font)
@@ -252,16 +272,26 @@ def _render_codex_column(
     """Render the one weekly Codex allowance the dashboard is meant to track."""
     left, top, right, bottom = box
     width = right - left
-    title_font = _fit_font(draw, "display", "CODEX", 36, width - 32)
-    label_font = _fit_font(draw, "display", "WEEK LEFT", 24, width - 32)
+    title_font = _fit_font(draw, "display", "CODEX", STATUS_TITLE_SIZE, width - 32)
+    label_font = _fit_font(draw, "display", "WEEK LEFT", STATUS_PRIMARY_LABEL_SIZE, width - 32)
     value = _percent(_provider_data(provider, "percent_remaining"))
-    value_font = _fit_font(draw, "display", value, 80, width - 28)
+    value_font = _fit_font(draw, "display", value, STATUS_PRIMARY_VALUE_SIZE, width - 28)
     reset_font = _fit_font(draw, "display", "RESETS MON, AUG 3 · 12:00 AM", 18, width - 28)
     reset = _format_reset_date_time(_provider_data(provider, "resets_at"))
 
-    _centered(draw, (left, top + 18, right, top + 62), "CODEX", title_font)
-    _centered(draw, (left, top + 62, right, top + 88), "WEEK LEFT", label_font)
-    _centered(draw, (left, top + 84, right, top + 160), value, value_font)
+    _centered(draw, (left, top + STATUS_TITLE_BOX[0], right, top + STATUS_TITLE_BOX[1]), "CODEX", title_font)
+    _centered(
+        draw,
+        (left, top + STATUS_PRIMARY_LABEL_BOX[0], right, top + STATUS_PRIMARY_LABEL_BOX[1]),
+        "WEEK LEFT",
+        label_font,
+    )
+    _centered(
+        draw,
+        (left, top + STATUS_PRIMARY_VALUE_BOX[0], right, top + STATUS_PRIMARY_VALUE_BOX[1]),
+        value,
+        value_font,
+    )
     _centered(draw, (left, bottom - 62, right, bottom - 34), f"RESETS {reset}", reset_font)
 
 
@@ -315,12 +345,28 @@ def render_dashboard(state: Mapping[str, Any]) -> Image.Image:
     _render_codex_column(draw, (267, FORECAST_BOTTOM, 534, STATUS_BOTTOM), codex)
 
     gmail_value = str(_provider_data(gmail, "unread", "—"))
-    gmail_title = _fit_font(draw, "display", "GMAIL", 36, 235)
-    gmail_value_font = _fit_font(draw, "display", gmail_value, 104, 230)
-    unread_font = _fit_font(draw, "mono", "UNREAD", 19, 180)
-    _centered(draw, (534, FORECAST_BOTTOM + 18, 800, FORECAST_BOTTOM + 62), "GMAIL", gmail_title)
-    _centered(draw, (534, FORECAST_BOTTOM + 78, 800, FORECAST_BOTTOM + 182), gmail_value, gmail_value_font)
-    _centered(draw, (534, FORECAST_BOTTOM + 186, 800, FORECAST_BOTTOM + 218), "UNREAD", unread_font)
+    gmail_width = COLUMN_BREAKS[3] - COLUMN_BREAKS[2]
+    gmail_title = _fit_font(draw, "display", "GMAIL", STATUS_TITLE_SIZE, gmail_width - 32)
+    unread_font = _fit_font(draw, "display", "UNREAD", STATUS_PRIMARY_LABEL_SIZE, gmail_width - 32)
+    gmail_value_font = _fit_font(draw, "display", gmail_value, STATUS_PRIMARY_VALUE_SIZE, gmail_width - 28)
+    _centered(
+        draw,
+        (534, FORECAST_BOTTOM + STATUS_TITLE_BOX[0], 800, FORECAST_BOTTOM + STATUS_TITLE_BOX[1]),
+        "GMAIL",
+        gmail_title,
+    )
+    _centered(
+        draw,
+        (534, FORECAST_BOTTOM + STATUS_PRIMARY_LABEL_BOX[0], 800, FORECAST_BOTTOM + STATUS_PRIMARY_LABEL_BOX[1]),
+        "UNREAD",
+        unread_font,
+    )
+    _centered(
+        draw,
+        (534, FORECAST_BOTTOM + STATUS_PRIMARY_VALUE_BOX[0], 800, FORECAST_BOTTOM + STATUS_PRIMARY_VALUE_BOX[1]),
+        gmail_value,
+        gmail_value_font,
+    )
 
     quote_text = str(_provider_data(quote, "text", "—"))
     attribution = str(_provider_data(quote, "attribution", ""))

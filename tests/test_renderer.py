@@ -4,6 +4,7 @@ import json
 import unittest
 import warnings
 from pathlib import Path
+from unittest.mock import patch
 
 from PIL import Image, ImageDraw
 
@@ -14,6 +15,11 @@ from frame_one.renderer import (
     FORECAST_HORIZONTAL_PADDING,
     FORECAST_LABEL_SIZE,
     FORECAST_VALUE_SIZE,
+    FORECAST_BOTTOM,
+    STATUS_PRIMARY_LABEL_BOX,
+    STATUS_PRIMARY_LABEL_SIZE,
+    STATUS_PRIMARY_VALUE_BOX,
+    STATUS_PRIMARY_VALUE_SIZE,
     _font,
     _text_width,
     _weather_mark,
@@ -41,6 +47,26 @@ class RendererTests(unittest.TestCase):
         image = render_dashboard(state)
 
         self.assertEqual(image.size, PANEL_SIZE)
+
+    def test_gmail_primary_metric_uses_the_shared_allowance_geometry(self) -> None:
+        state = json.loads((ROOT / "samples/dashboard-state.json").read_text())
+        state["gmail"] = {"state": "ok", "data": {"unread": 15}}
+
+        with patch("frame_one.renderer._centered") as centered:
+            render_dashboard(state)
+
+        unread_label = next(call for call in centered.call_args_list if call.args[2] == "UNREAD")
+        unread_value = next(call for call in centered.call_args_list if call.args[2] == "15")
+        self.assertEqual(
+            unread_label.args[1],
+            (534, FORECAST_BOTTOM + STATUS_PRIMARY_LABEL_BOX[0], 800, FORECAST_BOTTOM + STATUS_PRIMARY_LABEL_BOX[1]),
+        )
+        self.assertEqual(unread_label.args[3].size, STATUS_PRIMARY_LABEL_SIZE)
+        self.assertEqual(
+            unread_value.args[1],
+            (534, FORECAST_BOTTOM + STATUS_PRIMARY_VALUE_BOX[0], 800, FORECAST_BOTTOM + STATUS_PRIMARY_VALUE_BOX[1]),
+        )
+        self.assertEqual(unread_value.args[3].size, STATUS_PRIMARY_VALUE_SIZE)
 
     def test_longest_forecast_item_has_cross_platform_headroom(self) -> None:
         """Keep the fixed forecast type scale clear of the narrowest column."""
