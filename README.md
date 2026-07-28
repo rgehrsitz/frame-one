@@ -4,7 +4,7 @@
 
 Frame One turns a Raspberry Pi Zero 2 W and a 7.5-inch Waveshare e-paper panel into a long, low dashboard for weather, AI allowance, Gmail unread count, and one daily quote. It is designed for slow, deliberate updates—not a constantly moving screen.
 
-> **Early prototype:** the deterministic 800 × 480 renderer and Quote of the Day adapter work today. Hardware enclosure, display driving, and the weather/Gmail/Codex/Claude adapters are in active development.
+> **Early prototype:** the deterministic renderer, Quote of the Day adapter, and Waveshare 7.5-inch V2 display output work today. Hardware enclosure and the weather/Gmail/Codex/Claude adapters are in active development.
 
 ## What it will show
 
@@ -48,6 +48,29 @@ PYTHONPATH=src python3 -m frame_one.cli \
 ```
 
 The result is a strict 1-bit 800 × 480 PNG suitable for the target panel.
+
+### Show it on the Waveshare panel
+
+Frame One supports the monochrome 800 × 480 Waveshare 7.5-inch V2 panel through
+Waveshare's official `epd7in5_V2` library. First follow Waveshare's demo setup
+and confirm that their test image works. Then, from that Waveshare virtual
+environment, install Frame One and send the sample screen:
+
+```sh
+cd ~/waveshare-e-paper/RaspberryPi_JetsonNano/python
+source .venv/bin/activate
+python -m pip install -e ~/frame-one
+
+frame-one \
+  --input ~/frame-one/samples/dashboard-state.json \
+  --output ~/frame-one/output/dashboard.png \
+  --display waveshare-7in5-v2
+```
+
+The display adapter performs one full, clean refresh and then puts the panel to
+sleep. It loads the official driver from
+`~/waveshare-e-paper/RaspberryPi_JetsonNano/python/lib` by default. Set
+`FRAME_ONE_WAVESHARE_LIB` if you cloned it elsewhere.
 
 ### Live Quote of the Day
 

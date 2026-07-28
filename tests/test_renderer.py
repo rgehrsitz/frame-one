@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import unittest
+import warnings
 from pathlib import Path
 
 from frame_one import PANEL_SIZE, render_dashboard
@@ -17,7 +18,10 @@ class RendererTests(unittest.TestCase):
 
         self.assertEqual(image.size, PANEL_SIZE)
         self.assertEqual(image.mode, "1")
-        self.assertEqual(set(image.getdata()), {0, 1})
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            pixels = set(image.getdata())
+        self.assertEqual(pixels, {0, 1})
 
     def test_unavailable_provider_renders_without_error(self) -> None:
         state = json.loads((ROOT / "samples/dashboard-state.json").read_text())

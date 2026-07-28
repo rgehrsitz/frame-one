@@ -14,9 +14,9 @@ PANEL_SIZE = (800, 480)
 INK = 0
 PAPER = 1
 
-HEADER_BOTTOM = 106
-FORECAST_BOTTOM = 148
-STATUS_BOTTOM = 414
+HEADER_BOTTOM = 92
+FORECAST_BOTTOM = 140
+STATUS_BOTTOM = 410
 COLUMN_BREAKS = (0, 267, 534, 800)
 
 
@@ -157,23 +157,22 @@ def _render_usage_column(
 ) -> None:
     left, top, right, bottom = box
     width = right - left
-    title_font = _fit_font(draw, "display", title, 38, width - 32)
-    label_font = _fit_font(draw, "mono", default_window, 20, width - 32)
+    title_font = _fit_font(draw, "display", title, 36, width - 32)
+    label_font = _fit_font(draw, "mono", default_window, 18, width - 32)
     value = _percent(_provider_data(provider, "percent_remaining"))
-    # Keep a deliberate blank line before the secondary allowance and reset time.
-    value_font = _fit_font(draw, "display", value, 96, width - 28)
-    support_font = _fit_font(draw, "mono", "RESETS 12:00 PM", 18, width - 32)
+    value_font = _fit_font(draw, "display", value, 90, width - 28)
+    support_font = _fit_font(draw, "mono", "RESETS 12:00 PM", 17, width - 32)
 
-    _centered(draw, (left, top + 24, right, top + 72), title, title_font)
+    _centered(draw, (left, top + 18, right, top + 62), title, title_font)
     window_label = _provider_data(provider, "window_label", default_window)
-    _centered(draw, (left, top + 78, right, top + 108), str(window_label), label_font)
-    _centered(draw, (left, top + 104, right, top + 212), value, value_font)
+    _centered(draw, (left, top + 62, right, top + 88), str(window_label), label_font)
+    _centered(draw, (left, top + 82, right, top + 180), value, value_font)
 
     secondary_label = _provider_data(provider, "secondary_label", "WEEK")
     secondary = _percent(_provider_data(provider, "secondary_percent_remaining"))
     reset = _format_reset(_provider_data(provider, "resets_at"))
-    _left(draw, left + 34, bottom - 75, f"{secondary_label}  {secondary}", support_font)
-    _left(draw, left + 34, bottom - 43, f"RESETS  {reset}", support_font)
+    _left(draw, left + 34, bottom - 68, f"{secondary_label}  {secondary}", support_font)
+    _left(draw, left + 34, bottom - 37, f"RESETS  {reset}", support_font)
 
 
 def render_dashboard(state: Mapping[str, Any]) -> Image.Image:
@@ -189,16 +188,16 @@ def render_dashboard(state: Mapping[str, Any]) -> Image.Image:
 
     generated = datetime.fromisoformat(str(state.get("generated_at", datetime.now().astimezone().isoformat())))
     date_text = generated.strftime("%a · %b %-d").upper()
-    time_text = generated.strftime("%-I:%M")
+    updated_text = f"UPDATED {generated.strftime('%-I:%M %p')}"
     header_font = _fit_font(draw, "display", date_text, 28, 190)
-    time_font = _fit_font(draw, "display", time_text, 82, 255)
+    updated_font = _fit_font(draw, "mono", updated_text, 18, 235)
     current_temp = _provider_data(weather, "current_temperature_f")
     condition = str(_provider_data(weather, "current_condition", "unknown"))
     now_text = "NOW —" if current_temp is None else f"NOW {round(float(current_temp))}°"
     now_font = _fit_font(draw, "display", now_text, 28, 135)
-    _left(draw, 36, 38, date_text, header_font)
-    _centered(draw, (230, 15, 570, 96), time_text, time_font)
-    _right(draw, 742, 38, now_text, now_font)
+    _left(draw, 36, 31, date_text, header_font)
+    _centered(draw, (245, 24, 555, 68), updated_text, updated_font)
+    _right(draw, 742, 31, now_text, now_font)
     if weather.available:
         _weather_mark(draw, 748, 34, condition)
 
@@ -222,17 +221,17 @@ def render_dashboard(state: Mapping[str, Any]) -> Image.Image:
     _render_usage_column(draw, (267, FORECAST_BOTTOM, 534, STATUS_BOTTOM), "CODEX", codex)
 
     gmail_value = str(_provider_data(gmail, "unread", "—"))
-    gmail_title = _fit_font(draw, "display", "GMAIL", 38, 235)
-    gmail_value_font = _fit_font(draw, "display", gmail_value, 116, 230)
-    unread_font = _fit_font(draw, "mono", "UNREAD", 22, 180)
-    _centered(draw, (534, FORECAST_BOTTOM + 24, 800, FORECAST_BOTTOM + 72), "GMAIL", gmail_title)
-    _centered(draw, (534, FORECAST_BOTTOM + 96, 800, FORECAST_BOTTOM + 210), gmail_value, gmail_value_font)
-    _centered(draw, (534, FORECAST_BOTTOM + 208, 800, FORECAST_BOTTOM + 246), "UNREAD", unread_font)
+    gmail_title = _fit_font(draw, "display", "GMAIL", 36, 235)
+    gmail_value_font = _fit_font(draw, "display", gmail_value, 104, 230)
+    unread_font = _fit_font(draw, "mono", "UNREAD", 19, 180)
+    _centered(draw, (534, FORECAST_BOTTOM + 18, 800, FORECAST_BOTTOM + 62), "GMAIL", gmail_title)
+    _centered(draw, (534, FORECAST_BOTTOM + 78, 800, FORECAST_BOTTOM + 182), gmail_value, gmail_value_font)
+    _centered(draw, (534, FORECAST_BOTTOM + 186, 800, FORECAST_BOTTOM + 218), "UNREAD", unread_font)
 
     quote_text = str(_provider_data(quote, "text", "—"))
     attribution = str(_provider_data(quote, "attribution", ""))
-    quote_font = _fit_font(draw, "serif", quote_text, 20, 550)
+    quote_font = _fit_font(draw, "serif", quote_text, 21, 550)
     attribution_font = _fit_font(draw, "mono", attribution, 16, 180)
-    _left(draw, 36, 436, quote_text, quote_font)
-    _right(draw, 764, 439, attribution, attribution_font)
+    _left(draw, 36, 434, quote_text, quote_font)
+    _right(draw, 764, 438, attribution, attribution_font)
     return image

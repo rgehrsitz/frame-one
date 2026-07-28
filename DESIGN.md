@@ -12,12 +12,12 @@ The Waveshare panel is 800 × 480 pixels, black and white. The product design th
 
 | Region | Pixels | Purpose |
 | --- | --- | --- |
-| Header | `y: 0–106` | Date, large time, current weather |
-| Forecast strip | `y: 106–148` | Today, tonight, tomorrow |
-| Status grid | `y: 148–414` | Claude, Codex, Gmail |
-| Quote footer | `y: 414–480` | One short, attributed live quote per day |
+| Header | `y: 0–92` | Date, last-updated stamp, current weather |
+| Forecast strip | `y: 92–140` | Today, tonight, tomorrow |
+| Status grid | `y: 140–410` | Claude, Codex, Gmail |
+| Quote footer | `y: 410–480` | One short, attributed live quote per day |
 
-The status grid has three equal columns: `x: 0–267`, `267–534`, and `534–800`. Use one-pixel rules only at region and column boundaries.
+The status grid has three equal columns: `x: 0–267`, `267–534`, and `534–800`. Use one-pixel rules only at region and column boundaries. Leave a clear gap between the large allowance figure and its lower reset information; the figure must never compete with the operational details.
 
 ## Typography
 
@@ -29,12 +29,12 @@ For the production renderer, bundle the font files with the app rather than rely
 
 | Role | Font / size |
 | --- | --- |
-| Time | Barlow Condensed SemiBold, 82 px |
+| Updated stamp | IBM Plex Mono Medium, 18 px |
 | Header date / weather | Barlow Condensed SemiBold, 28 px |
 | Forecast item | IBM Plex Mono Medium, 18 px |
 | Column heading | Barlow Condensed SemiBold, 38 px |
-| Usage value / unread count | Barlow Condensed SemiBold, 116 px |
-| Usage label / reset time | IBM Plex Mono Medium, 20 px |
+| Usage value / unread count | Barlow Condensed SemiBold, 90–104 px |
+| Usage label / reset time | IBM Plex Mono Medium, 17–19 px |
 | Quote / attribution | IBM Plex Serif Italic 20 px / IBM Plex Mono Medium 16 px |
 
 ## Color
@@ -50,7 +50,7 @@ The desktop preview may use `#f7f5ef` as its page background to evoke paper, but
 
 ## Content rules
 
-- The header always stays stable: date left, time centered, current condition right.
+- The header always stays stable: date left, last-updated stamp centered, current condition right. It is not a live clock; it changes only when an intentional screen refresh occurs.
 - The forecast strip shows **Today**, **Tonight**, and **Tomorrow**. Each item may contain temperature and precipitation only when precipitation is meaningful.
 - Claude and Codex each show the current five-hour allowance, weekly allowance when available, and the next reset. Missing data renders as an em dash—never guessed or stale-looking values.
 - Gmail shows only unread count. It must not expose subject lines or personal message content.
