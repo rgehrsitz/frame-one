@@ -15,6 +15,7 @@ Environment=PATH=/usr/local/bin:/usr/bin:/bin
 Environment=PYTHONUNBUFFERED=1
 Environment=FRAME_ONE_ROOT=/home/rgehrsitz/frame-one
 Environment=FRAME_ONE_CONFIG_DIR=/home/rgehrsitz/.config/frame-one
+Environment=FRAME_ONE_RESPECT_SCHEDULE=false
 EnvironmentFile=/home/rgehrsitz/.config/frame-one/dashboard.env
 TimeoutStartSec=5min
 # Wait for the five-minute refresh, if it landed at 2:00 exactly, so the quote

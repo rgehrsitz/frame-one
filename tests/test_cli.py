@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime
+import json
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -52,6 +55,73 @@ class DisplayIfChangedTests(unittest.TestCase):
 
         self.assertTrue(sent)
         self.assertEqual(display.call_count, 2)
+
+
+class LiveRefreshTests(unittest.TestCase):
+    def setUp(self) -> None:
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.directory = Path(directory.name)
+        self.input = self.directory / "dashboard-state.json"
+        self.output = self.directory / "dashboard.png"
+        self.input.write_text(
+            json.dumps(
+                {
+                    "generated_at": "2026-07-28T12:00:00-04:00",
+                    "weather": {"state": "needs_setup", "data": {}},
+                    "claude": {"state": "needs_setup", "data": {}},
+                    "codex": {"state": "needs_setup", "data": {}},
+                    "gmail": {"state": "needs_setup", "data": {}},
+                    "quote": {"state": "needs_setup", "data": {}},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def test_identical_live_polls_do_not_refresh_the_panel_for_the_timestamp(self) -> None:
+        moments = iter(
+            (
+                datetime.fromisoformat("2026-07-28T12:00:00-04:00"),
+                datetime.fromisoformat("2026-07-28T12:05:00-04:00"),
+            )
+        )
+
+        with (
+            mock.patch.object(cli, "datetime") as clock,
+            mock.patch.object(cli, "GmailUnreadProvider") as gmail,
+            mock.patch.object(cli, "display_image") as display,
+            mock.patch.object(
+                sys,
+                "argv",
+                [
+                    "frame-one",
+                    "--input",
+                    str(self.input),
+                    "--output",
+                    str(self.output),
+                    "--gmail-token",
+                    str(self.directory / "gmail.token.json"),
+                    "--display",
+                    "waveshare-7in5-v2",
+                ],
+            ),
+        ):
+            clock.now.side_effect = lambda: next(moments)
+            clock.fromisoformat.side_effect = datetime.fromisoformat
+            gmail.return_value.get.return_value = {"state": "ok", "data": {"unread": 15}}
+
+            cli.main()
+            cli.main()
+
+        self.assertEqual(display.call_count, 1, "unchanged data should not flash the panel for a new timestamp")
+        self.assertEqual(
+            cli._last_render(cli._display_time_marker(self.output)),
+            datetime.fromisoformat("2026-07-28T12:00:00-04:00"),
+        )
+        self.assertEqual(
+            cli._last_render(self.output.with_name(f".{self.output.name}.last-render")),
+            datetime.fromisoformat("2026-07-28T12:05:00-04:00"),
+        )
 
 
 class RenderMarkerTests(unittest.TestCase):

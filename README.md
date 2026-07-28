@@ -105,10 +105,13 @@ There is deliberately no quote cache, bundled quote list, fallback, or sidecar J
 ### Automatic Pi refresh
 
 The supplied systemd units make the Pi self-starting: weather, Claude, Codex,
-and Gmail refresh every five minutes, while a separate run at 2:00 AM local
-time also fetches the daily quote. Both use the same lock, so the e-paper panel
-is never driven by two refreshes at once. The system timer is persistent, so a
-missed run is made up once after a reboot when the network becomes available.
+and Gmail poll every five minutes from 6:00 AM through midnight, then hourly
+overnight. A separate run at 2:00 AM local time also fetches the daily quote.
+Both use the same lock, so the e-paper panel is never driven by two refreshes
+at once. A poll only refreshes the physical panel when the rendered pixels
+change; the changing header timestamp alone cannot trigger a refresh. The
+system timer is persistent, so a missed run is made up once after a reboot when
+the network becomes available.
 
 Set the location as explicit coordinates—never a street address—in the local,
 owner-readable configuration file:

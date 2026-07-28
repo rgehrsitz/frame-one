@@ -89,9 +89,9 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    marker = args.output.with_name(f".{args.output.name}.last-render")
+    poll_marker = args.output.with_name(f".{args.output.name}.last-render")
     now = datetime.now().astimezone()
-    if args.respect_schedule and not is_due(now, _last_render(marker)):
+    if args.respect_schedule and not is_due(now, _last_render(poll_marker)):
         print("Skipped: overnight cadence, not due yet")
         return
 
@@ -172,21 +172,30 @@ def main() -> None:
 
     cache.save()
 
-    if live_sources:
-        # The header stamp reports when the panel was refreshed, which stays
-        # true even when an individual tile came back unavailable.
-        state["generated_at"] = now.isoformat()
-
     args.output.parent.mkdir(parents=True, exist_ok=True)
+    # Older installations have only a last-poll marker, so accept it once as
+    # the display time while the dedicated marker is introduced.
+    last_displayed_at = _last_render(_display_time_marker(args.output)) or _last_render(poll_marker)
+    if live_sources and last_displayed_at is not None:
+        # Hold the header at the last physical update while checking for new
+        # content.  Otherwise the changing timestamp itself would make every
+        # five-minute poll look different and force an e-paper refresh.
+        state["generated_at"] = last_displayed_at.isoformat()
     image = render_dashboard(state)
+    if live_sources and (args.force_display or _image_changed(image, args.output)):
+        # A visible value changed, so stamp the screen with this actual update
+        # time and render the final image that will reach the panel.
+        state["generated_at"] = now.isoformat()
+        image = render_dashboard(state)
     image.save(args.output)
-    _record_render(marker, now)
     print(f"Rendered {args.output}")
     if args.display == "waveshare-7in5-v2":
         if _display_if_changed(image, args.output, force=args.force_display):
+            _record_render(_display_time_marker(args.output), now)
             print("Updated Waveshare 7.5-inch V2 display")
         else:
             print("Panel left alone: nothing visible changed")
+    _record_render(poll_marker, now)
 
 
 def _report(name: str, state: dict[str, object]) -> dict[str, object]:
@@ -220,20 +229,34 @@ def _display_if_changed(image, output: Path, *, force: bool) -> bool:
     A full e-paper refresh is slow and visibly flashes, so at a five-minute
     cadence an unchanged screen should be left alone.
     """
-    digest = hashlib.sha256(image.tobytes()).hexdigest()
-    marker = output.with_name(f".{output.name}.displayed")
-    if not force:
-        try:
-            if marker.read_text(encoding="utf-8").strip() == digest:
-                return False
-        except OSError:
-            pass
+    if not force and not _image_changed(image, output):
+        return False
     display_image(image)
     try:
-        marker.write_text(digest + "\n", encoding="utf-8")
+        _display_marker(output).write_text(_image_digest(image) + "\n", encoding="utf-8")
     except OSError:
         pass
     return True
+
+
+def _image_changed(image, output: Path) -> bool:
+    """Whether an image differs from the last panel image, if any."""
+    try:
+        return _display_marker(output).read_text(encoding="utf-8").strip() != _image_digest(image)
+    except OSError:
+        return True
+
+
+def _display_marker(output: Path) -> Path:
+    return output.with_name(f".{output.name}.displayed")
+
+
+def _display_time_marker(output: Path) -> Path:
+    return output.with_name(f".{output.name}.last-display")
+
+
+def _image_digest(image) -> str:
+    return hashlib.sha256(image.tobytes()).hexdigest()
 
 
 if __name__ == "__main__":
