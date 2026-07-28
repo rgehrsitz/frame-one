@@ -4,13 +4,13 @@
 
 Frame One turns a Raspberry Pi Zero 2 W and a 7.5-inch Waveshare e-paper panel into a long, low dashboard for weather, AI allowance, Gmail unread count, and one daily quote. It is designed for slow, deliberate updates—not a constantly moving screen.
 
-> **Early prototype:** the deterministic renderer, weather, quote, automatic Claude Code allowance capture, Codex, and Gmail unread adapters are ready. Gmail and Codex each require one explicit local sign-in before their first live use; hardware enclosure and the refresh service remain in development.
+> **Early prototype:** the deterministic renderer, weather, quote, automatic Claude Code allowance capture, Codex, Gmail unread adapters, refresh service, and first parametric desk enclosure are ready. Gmail and Codex each require one explicit local sign-in before their first live use; the enclosure still needs a physical fit check against the exact panel and cable stack.
 
 ## What it will show
 
 - Current conditions and a Today / Tonight / Tomorrow forecast
-- Claude five-hour and weekly allowance from its documented Claude Code status-line contract
-- Codex rate-limit windows through the documented local App Server
+- Claude five-hour and weekly allowance, read on-device so the panel stays standalone
+- Codex rate-limit windows through the local App Server
 - Gmail unread count only—never subjects or message content
 - One live Quote of the Day
 
@@ -24,9 +24,14 @@ See [DESIGN.md](DESIGN.md) for the exact screen system and [DATA_SOURCES.md](DAT
 | Display | Waveshare 7.5-inch, 800 × 480 black-and-white e-paper HAT |
 | Power | 5 V USB power supply |
 | Storage | microSD card |
-| Enclosure | A custom, A1-mini-printable desk enclosure (in development) |
+| Enclosure | A custom, A1-mini-printable white desk frame with a recessed display and plinth |
 
-The case will be designed as smaller printable modules that assemble into the low, horizontal desktop form.
+The case is an A1-mini-printable modular desk frame: the broad face splits at
+the frame corners so no seam crosses the screen. Its parametric OpenSCAD source
+and assembly notes live in
+[`enclosure/`](enclosure/README.md); it needs one small fit print before the
+full case, because Waveshare listings include more than one physical panel
+assembly.
 
 ## Try the renderer
 
@@ -89,14 +94,14 @@ PYTHONPATH=src python3 -m frame_one.cli \
   --live-quote
 ```
 
-There is deliberately no quote cache, bundled quote list, fallback, or sidecar JSON. A failed or unsuitable quote stops the render before the existing output image is replaced. ZenQuotes attribution belongs in the eventual local setup/about page.
+There is deliberately no quote cache, bundled quote list, fallback, or sidecar JSON. A failed or unsuitable quote leaves the quote area quiet while the rest of the screen still refreshes. ZenQuotes attribution belongs in the eventual local setup/about page.
 
 ### Live weather
 
 Open-Meteo needs no account or key for this personal dashboard. Provide an
 explicit latitude and longitude—the software does not infer your location—and
-it will replace the sample weather data for that render. A failed request stops
-before it can replace the existing display.
+it will replace the sample weather data for that render. A failed request falls
+back to the last good forecast, then to `—`; it never blocks the other tiles.
 
 ```sh
 frame-one \
@@ -109,7 +114,38 @@ frame-one \
   --display waveshare-7in5-v2
 ```
 
-### Claude allowance (automatic)
+### Claude allowance — standalone (recommended)
+
+The Pi reads your five-hour and weekly allowance directly, with no second
+machine involved. Authorize it once:
+
+```sh
+frame-one-claude-login
+```
+
+It prints a URL. Open it in a browser on any machine, approve, then paste the
+address bar back — the page will fail to load, which is expected; the code is
+in the URL. The credential is written to `~/.config/frame-one/claude-oauth.json`
+with `0600` permissions and refreshes itself from then on.
+
+Refresh tokens do eventually expire outright. When that happens the Claude tile
+reports `not authorized yet; run frame-one-claude-login` and shows `—`; re-run
+the login command. That is a re-authorization, not a fault.
+
+```sh
+frame-one --input ~/frame-one/samples/dashboard-state.json \
+  --output ~/frame-one/output/dashboard.png \
+  --claude-oauth-credentials ~/.config/frame-one/claude-oauth.json
+```
+
+Two things to know before choosing this. The usage endpoint is **not part of
+Anthropic's published API**, so it may change without notice — the provider
+validates every field and shows `—` rather than guessing when it does. And the
+credential carries the `user:inference` scope, meaning a token on this device
+could in principle spend allowance, not only read it. Treat the Pi accordingly,
+and revoke the credential by deleting the file if the device leaves your hands.
+
+### Claude allowance via Claude Code (no extra credential)
 
 Frame One uses Claude Code's documented **status-line** `rate_limits` object.
 After an ordinary Claude Code response, it provides the five-hour and seven-day
@@ -117,7 +153,14 @@ usage percentages plus their exact reset timestamps. The collector preserves
 only those four values—never a prompt, transcript, repository name, account
 identifier, or credential.
 
-Install this repository on the Mac where you normally use Claude Code, then add
+This alternative needs no extra credential, but it only produces data in
+**rendered interactive terminal sessions** — the Claude Code desktop app and
+`claude -p` never invoke a status line, so neither produces a snapshot. It also
+reports nothing while you are not actively working, and nothing at all about
+usage from claude.ai. It requires the machine running Claude Code to reach the
+Pi, so the panel is no longer standalone.
+
+Install this repository on the machine where you run terminal `claude`, then add
 the command below as Claude Code's `statusLine.command`. If you already use a
 custom status line, call this collector from that wrapper rather than replacing
 your existing command.
@@ -146,7 +189,7 @@ frame-one --input ~/frame-one/samples/dashboard-state.json \
   --claude-status-file ~/.config/frame-one/claude-status.json
 ```
 
-Codex is read from the documented local App Server and never from browser
+Codex is read from the local App Server rather than from browser
 cookies, the desktop app, or token files. Once Codex CLI is installed and
 signed in on the Pi, add `--live-codex` to a normal render command.
 
@@ -167,7 +210,8 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 
 - The Pi fetches only values necessary for the screen.
 - Gmail uses read-only label metadata; no messages, senders, subjects, or bodies are displayed or logged.
-- Claude and Codex are never scraped. Each uses only a supported local integration.
+- Claude and Codex allowances are read as allowance figures only — percentages and reset times, never conversations, prompts, or project data.
+- Reading a meter through an undocumented vendor interface is allowed when it is the only thing that works; such providers fail to `—` rather than guess.
 - Credentials stay on their local source device and are never committed. `.gitignore` excludes local secrets and generated dashboard output.
 
 ## Attribution
