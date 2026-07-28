@@ -64,12 +64,18 @@ to intentionally override those defaults.
 
 Frame One supports the monochrome 800 × 480 Waveshare 7.5-inch V2 panel through
 Waveshare's official `epd7in5_V2` library. First follow Waveshare's demo setup
-and confirm that their test image works. Then, from that Waveshare virtual
-environment, install Frame One and send the sample screen:
+and confirm that their test image works. The driver uses Raspberry Pi OS's
+`spidev`, `gpiozero`, and `lgpio` modules. If Frame One has its own virtual
+environment, create it with access to those system packages:
 
 ```sh
-cd ~/waveshare-e-paper/RaspberryPi_JetsonNano/python
-source .venv/bin/activate
+python3 -m venv --system-site-packages ~/frame-one/.venv
+```
+
+Then install Frame One in that environment and send the sample screen:
+
+```sh
+source ~/frame-one/.venv/bin/activate
 python -m pip install -e ~/frame-one
 
 frame-one \
