@@ -20,6 +20,14 @@ STATUS_BOTTOM = 410
 COLUMN_BREAKS = (0, 267, 534, 800)
 ASSET_FONT_DIR = Path(__file__).parent / "assets" / "fonts"
 
+# These are deliberately fixed across all forecast cells.  The longest item
+# needs enough headroom for Pillow/FreeType metric differences between macOS
+# and the Raspberry Pi, so do not increase them without checking that margin.
+FORECAST_LABEL_SIZE = 20
+FORECAST_VALUE_SIZE = 14
+FORECAST_GAP = 6
+FORECAST_HORIZONTAL_PADDING = 18
+
 
 @dataclass(frozen=True)
 class Provider:
@@ -168,13 +176,12 @@ def _render_forecast_item(
 ) -> None:
     """Render a forecast label/value pair without shrinking one column's type."""
     left, top, right, bottom = box
-    label_font = _font("display", 20)
-    value_font = _font("mono", 15)
-    gap = 8
+    label_font = _font("display", FORECAST_LABEL_SIZE)
+    value_font = _font("mono", FORECAST_VALUE_SIZE)
     label_width = _text_width(draw, label, label_font)
     value_width = _text_width(draw, value, value_font)
-    content_width = label_width + gap + value_width
-    if content_width > right - left - 18:
+    content_width = label_width + FORECAST_GAP + value_width
+    if content_width > right - left - FORECAST_HORIZONTAL_PADDING:
         raise ValueError(f"Forecast item is too wide for its column: {label} {value}")
     x = left + (right - left - content_width) // 2
     label_box = draw.textbbox((0, 0), label, font=label_font)
@@ -184,7 +191,7 @@ def _render_forecast_item(
     label_y = top + (bottom - top - label_height) // 2
     value_y = top + (bottom - top - value_height) // 2
     _left(draw, x, label_y, label, label_font)
-    _left(draw, x + label_width + gap, value_y, value, value_font)
+    _left(draw, x + label_width + FORECAST_GAP, value_y, value, value_font)
 
 
 def _render_usage_column(
