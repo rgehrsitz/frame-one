@@ -4,8 +4,73 @@ from __future__ import annotations
 
 import json
 import subprocess
+import threading
 from datetime import datetime, timezone
 from typing import Any, Callable
+
+
+DEFAULT_TIMEOUT_SECONDS = 30
+_RATE_LIMIT_REQUEST_ID = 2
+
+
+def _run_app_server(
+    command: list[str],
+    *,
+    input: str,
+    stop_id: int,
+    timeout: float,
+    **_: object,
+) -> subprocess.CompletedProcess[str]:
+    """Send app-server requests and read the reply before closing stdin.
+
+    The App Server answers ``account/rateLimits/read`` from its backend, which
+    takes longer than writing the request.  ``subprocess.run`` closes stdin as
+    soon as the request is written, and the server treats that EOF as a
+    shutdown, so the reply never arrives.  Hold stdin open until the matching
+    response has been read instead.
+    """
+    process = subprocess.Popen(
+        command,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
+    assert process.stdin is not None and process.stdout is not None
+    lines: list[str] = []
+    answered = False
+    watchdog = threading.Timer(timeout, process.kill)
+    watchdog.start()
+    try:
+        process.stdin.write(input)
+        process.stdin.flush()
+        for line in process.stdout:
+            lines.append(line)
+            if _is_response_to(line, stop_id):
+                answered = True
+                break
+    except OSError:
+        pass
+    finally:
+        watchdog.cancel()
+        for stream in (process.stdin, process.stdout):
+            try:
+                stream.close()
+            except OSError:
+                pass
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+    return subprocess.CompletedProcess(command, 0 if answered else 1, stdout="".join(lines), stderr="")
+
+
+def _is_response_to(line: str, request_id: int) -> bool:
+    try:
+        return json.loads(line).get("id") == request_id
+    except (json.JSONDecodeError, AttributeError):
+        return False
 
 
 def _window_label(minutes: Any) -> str:
@@ -35,12 +100,14 @@ class CodexRateLimitProvider:
 
     def __init__(
         self,
-        runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+        runner: Callable[..., subprocess.CompletedProcess[str]] = _run_app_server,
         *,
         command: str = "codex",
+        timeout: float = DEFAULT_TIMEOUT_SECONDS,
     ) -> None:
         self._runner = runner
         self._command = command
+        self._timeout = timeout
 
     def get(self) -> dict[str, object]:
         messages = "\n".join(
@@ -59,23 +126,30 @@ class CodexRateLimitProvider:
                     }
                 ),
                 json.dumps({"method": "initialized", "params": {}}),
-                json.dumps({"method": "account/rateLimits/read", "id": 2, "params": {}}),
+                json.dumps(
+                    {"method": "account/rateLimits/read", "id": _RATE_LIMIT_REQUEST_ID, "params": {}}
+                ),
             )
         ) + "\n"
         try:
             completed = self._runner(
                 [self._command, "app-server"],
                 input=messages,
+                stop_id=_RATE_LIMIT_REQUEST_ID,
                 text=True,
                 capture_output=True,
-                timeout=15,
+                timeout=self._timeout,
                 check=False,
             )
             if completed.returncode:
                 raise ValueError("app-server failed")
             for line in completed.stdout.splitlines():
-                response = json.loads(line)
-                if response.get("id") == 2:
+                try:
+                    response = json.loads(line)
+                except json.JSONDecodeError:
+                    # The server interleaves unrelated notifications on stdout.
+                    continue
+                if response.get("id") == _RATE_LIMIT_REQUEST_ID:
                     if "error" in response:
                         raise ValueError("rate-limit request failed")
                     return self._parse(response["result"])
