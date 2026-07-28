@@ -26,19 +26,12 @@
     }
   },
   "codex": {
-    "state": "ok",
-    "data": {
-      "window_label": "5-HOUR",
-      "percent_remaining": 71,
-      "resets_at": "2026-07-25T15:00:00-04:00",
-      "secondary_label": "WEEK",
-      "secondary_percent_remaining": null,
-      "secondary_resets_at": null
-    }
+    "state": "needs_setup",
+    "data": {}
   },
   "gmail": {
-    "state": "ok",
-    "data": { "unread": 12 }
+    "state": "needs_setup",
+    "data": {}
   },
   "quote": {
     "state": "ok",

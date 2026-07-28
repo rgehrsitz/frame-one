@@ -28,13 +28,23 @@ class CodexRateLimitProviderTests(unittest.TestCase):
         state = CodexRateLimitProvider(runner=runner).get()
 
         self.assertEqual(state["state"], "ok")
-        self.assertEqual(state["data"]["window_label"], "5-HOUR")
-        self.assertEqual(state["data"]["percent_remaining"], 71)
-        self.assertEqual(state["data"]["secondary_label"], "WEEK")
-        self.assertEqual(state["data"]["secondary_percent_remaining"], 80)
+        self.assertEqual(state["data"]["window_label"], "WEEK")
+        self.assertEqual(state["data"]["percent_remaining"], 80)
+        self.assertNotIn("secondary_percent_remaining", state["data"])
 
     def test_command_failure_is_unavailable(self) -> None:
         def runner(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
             return subprocess.CompletedProcess(args[0], 1, stdout="", stderr="not signed in")
 
         self.assertEqual(CodexRateLimitProvider(runner=runner).get(), {"state": "unavailable", "data": {}})
+
+    def test_short_codex_window_is_not_mislabelled_as_weekly(self) -> None:
+        result = {
+            "rateLimits": {
+                "primary": {"usedPercent": 29, "windowDurationMins": 300, "resetsAt": 1785355200},
+                "secondary": None,
+            }
+        }
+
+        with self.assertRaisesRegex(ValueError, "weekly"):
+            CodexRateLimitProvider._parse(result)

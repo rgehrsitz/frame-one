@@ -96,12 +96,15 @@ class CodexRateLimitProvider:
         primary_data = _normalise_window(primary)
         secondary = limits.get("secondary")
         secondary_data = _normalise_window(secondary) if isinstance(secondary, dict) else None
+        # Frame One is intentionally a weekly-budget display for Codex. Some
+        # plans expose a shorter primary window too; when the App Server also
+        # returns an actual weekly secondary window, display that one instead.
+        displayed = secondary_data if secondary_data and secondary_data["label"] == "WEEK" else primary_data
+        if displayed["label"] != "WEEK":
+            raise ValueError("Codex did not provide a weekly rate-limit window")
         data: dict[str, object] = {
-            "window_label": primary_data["label"],
-            "percent_remaining": primary_data["percent_remaining"],
-            "resets_at": primary_data["resets_at"],
-            "secondary_label": secondary_data["label"] if secondary_data else "WEEK",
-            "secondary_percent_remaining": secondary_data["percent_remaining"] if secondary_data else None,
-            "secondary_resets_at": secondary_data["resets_at"] if secondary_data else None,
+            "window_label": displayed["label"],
+            "percent_remaining": displayed["percent_remaining"],
+            "resets_at": displayed["resets_at"],
         }
         return {"state": "ok", "data": data}
