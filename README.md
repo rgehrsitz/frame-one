@@ -199,12 +199,32 @@ Codex is read from the local App Server rather than from browser
 cookies, the desktop app, or token files. Once Codex CLI is installed and
 signed in on the Pi, add `--live-codex` to a normal render command.
 
-Gmail reads only `messagesUnread` from the `INBOX` label. It accepts a local,
-read-only OAuth token using `--gmail-token ~/.config/frame-one/gmail.token.json`.
-The token file is intentionally ignored by Git. Google OAuth setup is a
-separate explicit step, because it requires creating your own Google Cloud OAuth
-client and approving access to your mailbox; Frame One never asks for Gmail
-message content.
+Gmail reads only `messagesUnread` from the `INBOX` label. First create a Google
+Cloud project, enable the Gmail API, configure its OAuth consent screen, and
+create a **Desktop** OAuth client. Download its JSON on the Pi to an ignored,
+owner-readable path such as `~/.config/frame-one/google-client.json`. The
+consent screen needs the restricted `gmail.readonly` scope; in Google testing
+mode, add the mailbox owner as a test user.
+
+Then, from a Mac terminal, create a temporary loopback tunnel:
+
+```sh
+ssh -N -L 8765:127.0.0.1:8765 rgehrsitz@frame-one.local
+```
+
+On the Pi, start the authorization command and open the printed URL in the Mac
+browser:
+
+```sh
+frame-one-gmail-login \
+  --client-secrets ~/.config/frame-one/google-client.json
+```
+
+It writes `~/.config/frame-one/gmail.token.json` with `0600` permissions. That
+file is ignored by Git and contains the refreshable credential; Frame One uses
+it only for INBOX label metadata and never asks for Gmail messages, senders,
+subjects, or bodies. Add it to a normal render command with
+`--gmail-token ~/.config/frame-one/gmail.token.json`.
 
 ## Verify
 

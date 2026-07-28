@@ -60,7 +60,9 @@ Every provider returns this envelope to the renderer:
 
 **Request:** `GET /gmail/v1/users/me/labels/INBOX`, then display `messagesUnread`. This reads label metadata only; it does not fetch subjects, senders, message bodies, attachments, or message IDs. Gmail documents both `messagesUnread` and `threadsUnread`; Frame One uses messages by default because its label is “UNREAD.”
 
-**Storage:** the refresh token is encrypted at rest on the Pi and restricted to the dashboard service account. The token and any raw Gmail response must never be written to logs or sent to another device.
+**Authorization:** the account owner creates a Google Desktop OAuth client, enables the Gmail API, then approves the `gmail.readonly` scope once through `frame-one-gmail-login`. The Pi receives the callback over an SSH loopback tunnel, so the browser login and the token exchange remain between the account owner and the local device.
+
+**Storage:** the refresh token is stored in an owner-readable (`0600`) local file restricted to the dashboard service account. The token and any raw Gmail response must never be written to logs or sent to another device.
 
 **Fallback:** show `—` with a small “Gmail setup required” message until OAuth setup is complete. No email-derived content is ever shown on the panel.
 
@@ -136,8 +138,9 @@ Frame One fetches the quote when the daily dashboard refresh runs. It provides *
 - The retry, last-known-good, and refresh-cadence layer is implemented: every provider
   retries under one shared deadline, falls back to its last good value while that value is
   still inside `stale_after_seconds`, and then shows `—`. No provider can abort a round.
-- The Gmail reader requires a user-created, read-only OAuth token. Its initial
-  authorization ceremony is the remaining setup work.
+- The Gmail reader includes a local authorization command, but still requires a
+  user-created Google Desktop OAuth client and one browser approval before its
+  first live use.
 - The Codex reader requires Codex CLI plus a local `codex login` on the Pi; it invokes only
   `account/rateLimits/read` over stdio JSON-RPC. The Pi runs 64-bit Raspberry Pi OS, which
   the `linux-arm64` build supports.
