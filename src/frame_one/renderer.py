@@ -220,21 +220,25 @@ def _render_claude_column(
     left, top, right, bottom = box
     width = right - left
     title_font = _fit_font(draw, "display", "CLAUDE", 36, width - 32)
-    label_font = _fit_font(draw, "mono", "5-HOUR LEFT", 18, width - 32)
+    window_font = _fit_font(draw, "display", "5-HOUR LEFT", 24, width - 32)
     value = _percent(_provider_data(provider, "percent_remaining"))
-    value_font = _fit_font(draw, "display", value, 84, width - 28)
-    support_font = _fit_font(draw, "mono", "RESETS MON, AUG 3 · 12:00 AM", 14, width - 28)
+    value_font = _fit_font(draw, "display", value, 80, width - 28)
+    detail_label_font = _fit_font(draw, "display", "5-HOUR RESETS", 16, width - 52)
+    detail_value_font = _fit_font(draw, "mono", "12:00 AM", 14, width - 52)
+    weekly_reset_font = _fit_font(draw, "display", "RESETS MON, AUG 3 · 12:00 AM", 18, width - 28)
     secondary = _percent(_provider_data(provider, "secondary_percent_remaining"))
     primary_reset = _format_reset(_provider_data(provider, "resets_at"))
     secondary_reset_at = _provider_data(provider, "secondary_resets_at")
     secondary_reset = _format_reset_date_time(secondary_reset_at)
 
     _centered(draw, (left, top + 18, right, top + 62), "CLAUDE", title_font)
-    _centered(draw, (left, top + 62, right, top + 88), "5-HOUR LEFT", label_font)
-    _centered(draw, (left, top + 80, right, top + 164), value, value_font)
-    _centered(draw, (left, bottom - 104, right, bottom - 82), f"5-HOUR RESETS {primary_reset}", support_font)
-    _centered(draw, (left, bottom - 72, right, bottom - 50), f"WEEK LEFT {secondary}", support_font)
-    _centered(draw, (left, bottom - 40, right, bottom - 18), f"RESETS {secondary_reset}", support_font)
+    _centered(draw, (left, top + 62, right, top + 88), "5-HOUR LEFT", window_font)
+    _centered(draw, (left, top + 84, right, top + 160), value, value_font)
+    _left(draw, left + 26, bottom - 92, "5-HOUR RESETS", detail_label_font)
+    _right(draw, right - 26, bottom - 92, primary_reset, detail_value_font)
+    _left(draw, left + 26, bottom - 61, "WEEK LEFT", detail_label_font)
+    _right(draw, right - 26, bottom - 61, secondary, detail_value_font)
+    _centered(draw, (left, bottom - 34, right, bottom - 10), f"RESETS {secondary_reset}", weekly_reset_font)
 
 
 def _render_codex_column(
@@ -246,15 +250,15 @@ def _render_codex_column(
     left, top, right, bottom = box
     width = right - left
     title_font = _fit_font(draw, "display", "CODEX", 36, width - 32)
-    label_font = _fit_font(draw, "mono", "WEEK LEFT", 18, width - 32)
+    label_font = _fit_font(draw, "display", "WEEK LEFT", 24, width - 32)
     value = _percent(_provider_data(provider, "percent_remaining"))
-    value_font = _fit_font(draw, "display", value, 84, width - 28)
-    reset_font = _fit_font(draw, "mono", "RESETS MON, AUG 3 · 12:00 AM", 14, width - 28)
+    value_font = _fit_font(draw, "display", value, 80, width - 28)
+    reset_font = _fit_font(draw, "display", "RESETS MON, AUG 3 · 12:00 AM", 18, width - 28)
     reset = _format_reset_date_time(_provider_data(provider, "resets_at"))
 
     _centered(draw, (left, top + 18, right, top + 62), "CODEX", title_font)
     _centered(draw, (left, top + 62, right, top + 88), "WEEK LEFT", label_font)
-    _centered(draw, (left, top + 80, right, top + 164), value, value_font)
+    _centered(draw, (left, top + 84, right, top + 160), value, value_font)
     _centered(draw, (left, bottom - 62, right, bottom - 34), f"RESETS {reset}", reset_font)
 
 
