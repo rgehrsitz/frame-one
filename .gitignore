@@ -13,5 +13,12 @@ secrets/
 *.token.json
 credentials.json
 claude-status.json
+claude-oauth.json
+claude_creds.json
 *.pem
 *.key
+
+# Runtime markers written beside the rendered output
+.frame-one-state.json
+*.last-render
+*.displayed
