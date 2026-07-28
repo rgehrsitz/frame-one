@@ -32,7 +32,8 @@ Open the model in OpenSCAD and export each `part`: `bezel_left`, `bezel_right`,
 `plinth_right`. The `assembly` selection is a visual check only; the finished
 object is deliberately wider than an A1 mini's 180 mm bed. Every printable
 module fits the A1 mini. Print the bezel rails face-down, the rear parts with
-their outside face on the bed, and the plinth parts on their broad bases.
+their outside face on the bed, and the plinth halves on their underside (the
+face that meets the desk), which leaves the seating channel opening upward.
 
 Suggested starting profile:
 
@@ -53,8 +54,9 @@ Assembly sequence:
    the downward cable throat. Add the foam pad only where it supports a border
    or electronics—not the active display.
 4. Glue the rear and plinth halves together from their inside/rear faces. Close
-   the shell with four M3 × 20 mm screws from the rear. Set the lower edge
-   against the plinth's front rail, then add silicone feet underneath.
+   the shell with four M3 × 20 mm screws from the rear. Lower the finished case
+   into the plinth's channel—it seats 9 mm deep and the stand, not the panel,
+   carries the weight—then add silicone feet underneath.
 
 The rear is intentionally an electronics volume rather than a rigid Pi/HAT
 mount. This leaves the screen and its delicate flex cable serviceable and
@@ -64,11 +66,17 @@ connector are confirmed.
 
 ## Design language
 
-The target silhouette is approximately 200 mm wide, 132 mm high, and 29 mm
-deep at the electronics body, with a 16 mm lower plinth. The display sits 1.2
-mm behind a flat front reveal. The slight rear setback and lower rail make the
-object read as a finished desk instrument—similar in restraint to the provided
-reference—rather than a tablet propped on a stand.
+The target silhouette is approximately 200 mm wide, 132 mm high, and 26 mm
+deep at the electronics body, seated 9 mm into a 16 mm plinth. The display sits
+1.2 mm behind a flat front reveal, and the frame overlaps the panel by 6.5 mm
+at the sides and 9.6 mm top and bottom.
+
+The plinth is a separate seating trough rather than a glued-on rail: the case
+drops into a full-width channel, so the stand carries the load and the panel is
+never a structural member. Its 10 mm front wall is the continuous rail read
+from a seated desk. Note the reference photo that informed this look uses a
+much wider 10.85-inch panel; the proportions here are set by the 7.5-inch
+panel's 177.2 × 118.2 mm outline, so the object is squarer than the reference.
 
 Keep the printed front matte white or very pale warm gray. The e-paper's own
 white becomes the visual field; avoid a black bezel, shiny silk filament, or a

@@ -39,12 +39,17 @@ window_clearance = 1.0;
 frame_inner_x = (active_w + window_clearance) / 2;
 frame_inner_y = (active_h + window_clearance) / 2;
 
-// A1 mini-friendly, separate base. Its shallow front rail produces the
-// framed-object silhouette without asking the e-paper panel to carry weight.
+// A1 mini-friendly, separate base: a seating trough the assembled case drops
+// into, so the panel never carries weight and the stand stays a separate print.
+// Modelled in the same frame as every other part -- x across, y up, z toward
+// the back -- so the assembly needs no rotation to place it.
 plinth_w = 200;
-plinth_d = 31;
-plinth_h = 16;
-plinth_wall = 2.4;
+plinth_h = 16; // total height above the desk
+plinth_seat = 9; // how deep the case sits in the channel
+plinth_front = 10; // trough projection in front of the screen face
+plinth_back = 10; // trough projection behind the rear shell
+channel_clearance = 0.6;
+case_t = bezel_t + rear_d;
 
 // -- Fasteners -------------------------------------------------------------
 // Four M3 x 20 socket-head screws close the rear shell into heat-set inserts
@@ -81,10 +86,13 @@ module screw_positions() {
 // Crop the visual assembly into A1-mini-printable modules. The front-frame
 // boundaries follow the aperture corners, like a conventional picture frame;
 // the front never receives a distracting straight seam across the display.
+// The crop box is deliberately unbounded in z: a part that grew past a fixed
+// depth would be silently clipped, and a silently short part is exactly the
+// kind of error that only shows up after a long print.
 module crop(x0, x1, y0, y1) {
     intersection() {
         children();
-        translate([x0, y0, -1]) cube([x1 - x0, y1 - y0, 40]);
+        translate([x0, y0, -200]) cube([x1 - x0, y1 - y0, 400]);
     }
 }
 
@@ -186,39 +194,51 @@ module rear_right() {
         rear_shell();
 }
 
+// Derived plinth geometry, in the shared frame. The channel floor sits at the
+// case's own bottom edge, so the case simply drops in.
+channel_front = -channel_clearance / 2;
+channel_back = case_t + channel_clearance / 2;
+plinth_y_floor = -body_h / 2;
+plinth_y_top = plinth_y_floor + plinth_seat;
+plinth_y_bottom = plinth_y_top - plinth_h;
+plinth_z_front = channel_front - plinth_front;
+plinth_z_back = channel_back + plinth_back;
+
 module plinth() {
-    // A low, solid front rail grounds the object visually and protects the
-    // lower edge of the screen without putting point-load on its glass.
+    // A low trough: the case seats into a full-width channel, so the stand
+    // carries the load and the panel's glass never does. The front wall reads
+    // as the continuous rail seen from a seated desk.
     difference() {
-        hull() {
-            translate([0, -plinth_d / 2, 0])
-                rounded_box(plinth_w, plinth_d, 2, 3);
-            translate([0, -plinth_d / 2 + 4, plinth_h - 2])
-                rounded_box(plinth_w - 4, plinth_d - 7, 2, 3);
-        }
-        // Cable path out the rear underside.
-        translate([-22, plinth_d / 2 - plinth_wall - eps, 0])
-            cube([44, plinth_wall + 2 * eps, 8]);
+        translate([0, plinth_y_top - plinth_h / 2, plinth_z_front])
+            linear_extrude(height = plinth_z_back - plinth_z_front)
+                rounded_rect(plinth_w, plinth_h, 3);
+
+        // The seating channel, open upward.
+        translate([-plinth_w / 2 - eps, plinth_y_floor, channel_front])
+            cube([plinth_w + 2 * eps, plinth_seat + eps, channel_back - channel_front]);
+
+        // Cable throat through the rear wall of the trough.
+        translate([-22, plinth_y_floor, channel_back - eps])
+            cube([44, plinth_seat + eps, plinth_z_back - channel_back + 2 * eps]);
     }
 }
 
 module plinth_left() {
-    crop(-plinth_w / 2, eps, -plinth_d / 2, plinth_d / 2)
+    crop(-plinth_w / 2 - eps, eps, plinth_y_bottom - eps, plinth_y_top + eps)
         plinth();
 }
 
 module plinth_right() {
-    crop(-eps, plinth_w / 2, -plinth_d / 2, plinth_d / 2)
+    crop(-eps, plinth_w / 2 + eps, plinth_y_bottom - eps, plinth_y_top + eps)
         plinth();
 }
 
 module assembly() {
     color("white") front_bezel();
     translate([0, 0, bezel_t]) color("gainsboro") rear_shell();
-    // The plinth's broad base is on the desk; it overlaps the lower 16 mm of
-    // the body as the clean, continuous front rail seen from a seated desk.
-    translate([0, -body_h / 2 + plinth_h, 0])
-        rotate([90, 0, 0]) color("white") plinth();
+    // No transform: the plinth is authored in this same frame, and the case
+    // drops into its channel exactly where it is drawn.
+    color("white") plinth();
     if (show_fasteners)
         screw_positions()
             translate([0, 0, bezel_t + rear_d - 2.4])
