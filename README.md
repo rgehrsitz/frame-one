@@ -4,7 +4,7 @@
 
 Frame One turns a Raspberry Pi Zero 2 W and a 7.5-inch Waveshare e-paper panel into a long, low dashboard for weather, AI allowance, Gmail unread count, and one daily quote. It is designed for slow, deliberate updates—not a constantly moving screen.
 
-> **Early prototype:** the deterministic renderer, weather, quote, automatic Claude Code allowance capture, Codex, Gmail unread adapters, refresh service, and first parametric desk enclosure are ready. Gmail and Codex each require one explicit local sign-in before their first live use; the enclosure still needs a physical fit check against the exact panel and cable stack.
+> **Early prototype:** the deterministic renderer, weather, quote, automatic Claude Code allowance capture, Codex, Gmail unread adapters, refresh service, and a fit-proven desk enclosure are ready. Gmail and Codex each require one explicit local sign-in before their first live use.
 
 ## What it will show
 
@@ -24,14 +24,13 @@ See [DESIGN.md](DESIGN.md) for the exact screen system and [DATA_SOURCES.md](DAT
 | Display | Waveshare 7.5-inch, 800 × 480 black-and-white e-paper HAT |
 | Power | 5 V USB power supply |
 | Storage | microSD card |
-| Enclosure | A custom, A1-mini-printable white desk frame with a recessed display and plinth |
+| Enclosure | A magnetic two-piece desk frame for the Waveshare 7.5-inch panel |
 
-The case is an A1-mini-printable modular desk frame: the broad face splits at
-the frame corners so no seam crosses the screen. Its parametric OpenSCAD source
-and assembly notes live in
-[`enclosure/`](enclosure/README.md); it needs one small fit print before the
-full case, because Waveshare listings include more than one physical panel
-assembly.
+The enclosure is the fit-proven magnetic two-piece frame in
+[`enclosure/EInk7.5-Frame-Magnets-4x2mm.3mf`](enclosure/EInk7.5-Frame-Magnets-4x2mm.3mf).
+It is designed for the Waveshare 7.5-inch (800 × 480) display, a Raspberry Pi
+Zero 2 W, and eight 4 × 2 mm magnets. See the
+[enclosure notes](enclosure/README.md) before printing.
 
 ## Try the renderer
 
