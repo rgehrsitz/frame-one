@@ -15,7 +15,7 @@ from .providers.claude_oauth import ClaudeUsageProvider
 from .providers.codex import CodexRateLimitProvider
 from .providers.gmail import GmailUnreadProvider
 from .providers.quotes import quote_provider_state
-from .providers.weather import OpenMeteoWeatherProvider, WeatherLocation
+from .providers.weather import NwsWeatherProvider, OpenMeteoWeatherProvider, WeatherLocation
 from .refresh import (
     APP_SERVER,
     CLAUDE_OAUTH_STALE_SECONDS,
@@ -45,7 +45,7 @@ def main() -> None:
         action="store_true",
         help="Fetch and render the live Quote of the Day without storing it separately",
     )
-    parser.add_argument("--live-weather", action="store_true", help="Fetch current weather from Open-Meteo")
+    parser.add_argument("--live-weather", action="store_true", help="Fetch NWS weather with Open-Meteo fallback")
     parser.add_argument(
         "--claude-status-file",
         type=Path,
@@ -107,9 +107,9 @@ def main() -> None:
         live_sources = True
         if args.weather_latitude is None or args.weather_longitude is None:
             parser.error("--live-weather requires --weather-latitude and --weather-longitude")
-        provider = OpenMeteoWeatherProvider(
-            WeatherLocation(args.weather_latitude, args.weather_longitude, args.weather_timezone)
-        )
+        location = WeatherLocation(args.weather_latitude, args.weather_longitude, args.weather_timezone)
+        fallback = OpenMeteoWeatherProvider(location)
+        provider = NwsWeatherProvider(location, fallback.get)
         state["weather"] = _report(
             "weather", resolve("weather", provider.get, cache=cache, now=now, policy=NETWORK, deadline=deadline)
         )
