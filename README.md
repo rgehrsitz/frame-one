@@ -8,7 +8,7 @@ Frame One turns a Raspberry Pi Zero 2 W and a 7.5-inch Waveshare e-paper panel i
 
 ## What it will show
 
-- Current conditions and a Today / Tonight / Tomorrow forecast
+- NWS conditions, active weather alerts, and a Today / Tonight / Tomorrow forecast
 - Claude five-hour and weekly allowance, read on-device so the panel stays standalone
 - Codex rate-limit windows through the local App Server
 - Gmail unread count only—never subjects or message content
@@ -282,6 +282,7 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 
 ## Attribution
 
+- Weather alerts, forecasts, and observations: [National Weather Service](https://www.weather.gov/)
 - Weather data: [Open-Meteo](https://open-meteo.com/)
 - Daily quote provider: [ZenQuotes](https://zenquotes.io/)
 - E-paper hardware: [Waveshare](https://www.waveshare.com/)

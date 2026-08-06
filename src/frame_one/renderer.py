@@ -191,11 +191,24 @@ def _weather_mark(draw: ImageDraw.ImageDraw, x: int, y: int, code: str) -> None:
         # the cloud and make the mark harder to parse at a glance.
         draw.ellipse((x + 7, y + 3, x + 19, y + 15), outline=INK, width=2)
         cloud(y + 5)
+    elif code == "alert":
+        draw.polygon(((x + 17, y + 2), (x + 2, y + 30), (x + 32, y + 30)), outline=INK)
+        draw.rectangle((x + 16, y + 11, x + 18, y + 21), fill=INK)
+        draw.rectangle((x + 16, y + 25, x + 18, y + 27), fill=INK)
     else:
         cloud(y + 3)
-    if code == "rain":
+    if code in ("rain", "storm"):
         for dx in (11, 19, 27):
             _line(draw, (x + dx, y + 27, x + dx - 2, y + 31))
+    if code in ("snow", "mixed"):
+        for dx in (12, 22, 32):
+            _line(draw, (x + dx - 2, y + 28, x + dx + 2, y + 32))
+            _line(draw, (x + dx + 2, y + 28, x + dx - 2, y + 32))
+    if code in ("sleet", "ice", "mixed"):
+        for dx in (11, 21, 31):
+            draw.ellipse((x + dx - 1, y + 28, x + dx + 1, y + 30), fill=INK)
+    if code == "storm":
+        draw.polygon(((x + 20, y + 23), (x + 15, y + 31), (x + 20, y + 30), (x + 16, y + 36)), fill=INK)
 
 
 def _render_forecast_item(
@@ -308,7 +321,8 @@ def render_dashboard(state: Mapping[str, Any]) -> Image.Image:
 
     generated = datetime.fromisoformat(str(state.get("generated_at", datetime.now().astimezone().isoformat())))
     date_text = generated.strftime("%a · %b %-d").upper()
-    updated_text = f"UPDATED {generated.strftime('%-I:%M %p')}"
+    active_alert = _provider_data(weather, "active_alert")
+    updated_text = str(active_alert or f"UPDATED {generated.strftime('%-I:%M %p')}")
     header_font = _fit_font(draw, "display", date_text, 28, 190)
     updated_font = _fit_font(draw, "mono", updated_text, 18, 235)
     current_temp = _provider_data(weather, "current_temperature_f")
@@ -329,8 +343,8 @@ def render_dashboard(state: Mapping[str, Any]) -> Image.Image:
 
     forecast_items = (
         ("TODAY", f"{_provider_data(weather, 'today_high_f', '—')}°/{_provider_data(weather, 'today_low_f', '—')}°"),
-        ("TONIGHT", f"{_provider_data(weather, 'tonight_low_f', '—')}° · RAIN {_provider_data(weather, 'tonight_rain_percent', '—')}%"),
-        ("TOMORROW", f"{_provider_data(weather, 'tomorrow_high_f', '—')}°/{_provider_data(weather, 'tomorrow_low_f', '—')}° · RAIN {_provider_data(weather, 'tomorrow_rain_percent', '—')}%"),
+        ("TONIGHT", f"{_provider_data(weather, 'tonight_low_f', '—')}° · {_provider_data(weather, 'tonight_precipitation_type', 'RAIN')} {_provider_data(weather, 'tonight_rain_percent', '—')}%"),
+        ("TOMORROW", f"{_provider_data(weather, 'tomorrow_high_f', '—')}°/{_provider_data(weather, 'tomorrow_low_f', '—')}° · {_provider_data(weather, 'tomorrow_precipitation_type', 'RAIN')} {_provider_data(weather, 'tomorrow_rain_percent', '—')}%"),
     )
     for index, (label, value) in enumerate(forecast_items):
         left, right = COLUMN_BREAKS[index], COLUMN_BREAKS[index + 1]

@@ -83,10 +83,32 @@ class RendererTests(unittest.TestCase):
         self.assertLessEqual(content_width, available_width - 18)
 
     def test_weather_marks_draw_crisp_ink_for_each_supported_condition(self) -> None:
-        for condition in ("clear", "partly_cloudy", "cloudy", "rain"):
+        for condition in ("clear", "partly_cloudy", "cloudy", "rain", "snow", "sleet", "ice", "mixed", "storm", "alert"):
             image = Image.new("1", (48, 48), 1)
             _weather_mark(ImageDraw.Draw(image), 4, 4, condition)
             self.assertIn(0, image.getdata(), condition)
+
+    def test_active_weather_alert_replaces_the_routine_update_label(self) -> None:
+        state = json.loads((ROOT / "samples/dashboard-state.json").read_text())
+        state["weather"]["data"]["active_alert"] = "FLASH FLOOD WARNING"
+        state["weather"]["data"]["current_condition"] = "storm"
+
+        with patch("frame_one.renderer._centered") as centered:
+            render_dashboard(state)
+
+        self.assertTrue(any(call.args[2] == "FLASH FLOOD WARNING" for call in centered.call_args_list))
+
+    def test_forecast_uses_the_reported_precipitation_type(self) -> None:
+        state = json.loads((ROOT / "samples/dashboard-state.json").read_text())
+        state["weather"]["data"]["tonight_precipitation_type"] = "SNOW"
+        state["weather"]["data"]["tomorrow_precipitation_type"] = "SLEET"
+
+        with patch("frame_one.renderer._render_forecast_item") as forecast_item:
+            render_dashboard(state)
+
+        values = [call.args[3] for call in forecast_item.call_args_list]
+        self.assertTrue(any("SNOW 10%" in value for value in values))
+        self.assertTrue(any("SLEET 40%" in value for value in values))
 
 
 if __name__ == "__main__":

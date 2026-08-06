@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import signal
 import subprocess
 import threading
 from datetime import datetime, timezone
@@ -10,7 +12,8 @@ from typing import Any, Callable
 
 
 DEFAULT_TIMEOUT_SECONDS = 30
-_RATE_LIMIT_REQUEST_ID = 2
+_ACCOUNT_REQUEST_ID = 2
+_RATE_LIMIT_REQUEST_ID = 3
 
 
 def _run_app_server(
@@ -23,11 +26,8 @@ def _run_app_server(
 ) -> subprocess.CompletedProcess[str]:
     """Send app-server requests and read the reply before closing stdin.
 
-    The App Server answers ``account/rateLimits/read`` from its backend, which
-    takes longer than writing the request.  ``subprocess.run`` closes stdin as
-    soon as the request is written, and the server treats that EOF as a
-    shutdown, so the reply never arrives.  Hold stdin open until the matching
-    response has been read instead.
+    Hold stdin open while requests are sent, and finish each request/response
+    exchange before sending the next stateful protocol message.
     """
     process = subprocess.Popen(
         command,
@@ -35,19 +35,40 @@ def _run_app_server(
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
         text=True,
+        start_new_session=True,
     )
     assert process.stdin is not None and process.stdout is not None
     lines: list[str] = []
     answered = False
-    watchdog = threading.Timer(timeout, process.kill)
+
+    def kill_process_group() -> None:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+    watchdog = threading.Timer(timeout, kill_process_group)
     watchdog.start()
     try:
-        process.stdin.write(input)
-        process.stdin.flush()
-        for line in process.stdout:
-            lines.append(line)
-            if _is_response_to(line, stop_id):
-                answered = True
+        # App Server requests are stateful: initialization must finish before
+        # account calls, and a forced token refresh must finish before limits
+        # are read. Sending the entire exchange in one burst can strand the
+        # server during an account-plan transition.
+        for request_line in input.splitlines():
+            process.stdin.write(request_line + "\n")
+            process.stdin.flush()
+            try:
+                request_id = json.loads(request_line).get("id")
+            except (json.JSONDecodeError, AttributeError):
+                request_id = None
+            if request_id is None:
+                continue
+            for line in process.stdout:
+                lines.append(line)
+                if _is_response_to(line, request_id):
+                    answered = request_id == stop_id
+                    break
+            if answered:
                 break
     except OSError:
         pass
@@ -61,7 +82,7 @@ def _run_app_server(
         try:
             process.wait(timeout=5)
         except subprocess.TimeoutExpired:
-            process.kill()
+            kill_process_group()
             process.wait()
     return subprocess.CompletedProcess(command, 0 if answered else 1, stdout="".join(lines), stderr="")
 
@@ -126,6 +147,13 @@ class CodexRateLimitProvider:
                     }
                 ),
                 json.dumps({"method": "initialized", "params": {}}),
+                json.dumps(
+                    {
+                        "method": "account/read",
+                        "id": _ACCOUNT_REQUEST_ID,
+                        "params": {"refreshToken": True},
+                    }
+                ),
                 json.dumps(
                     {"method": "account/rateLimits/read", "id": _RATE_LIMIT_REQUEST_ID, "params": {}}
                 ),
