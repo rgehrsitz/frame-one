@@ -48,8 +48,9 @@ Every provider returns this envelope to the renderer:
 
 **Screen mapping:**
 
-- Header: current temperature and condition icon. The highest-priority active NWS alert replaces the routine update label and uses a storm or generic alert mark.
-- Forecast strip: Today high/low; Tonight temperature and rain probability; Tomorrow high/low and rain probability.
+- Header: current temperature and condition icon, including distinct winter precipitation marks. The highest-priority active NWS alert replaces the routine update label and uses a storm or generic alert mark.
+- Forecast strip: Today high/low; Tonight temperature and precipitation probability; Tomorrow high/low and precipitation probability.
+- Forecast precipitation labels identify rain, snow, sleet, ice, or mixed precipitation from the NWS forecast wording instead of describing every probability as rain.
 - If NWS is unavailable, the complete Open-Meteo state is used. If only part of NWS is unavailable, usable NWS alerts or forecast values are combined with Open-Meteo rather than blanking the weather block.
 
 ### 2. Gmail unread count

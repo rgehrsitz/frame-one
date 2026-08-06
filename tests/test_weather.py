@@ -44,11 +44,13 @@ class OpenMeteoWeatherProviderTests(unittest.TestCase):
             "daily": {
                 "temperature_2m_max": [78.2, 80.1],
                 "temperature_2m_min": [65.1, 66.0],
+                "weather_code": [2, 61],
                 "precipitation_probability_max": [10, 40],
             },
             "hourly": {
                 "time": ["2026-07-28T09:00", "2026-07-28T18:00", "2026-07-28T19:00", "2026-07-29T06:00"],
                 "temperature_2m": [71, 69, 64, 61],
+                "weather_code": [2, 2, 61, 2],
                 "precipitation_probability": [0, 10, 30, 20],
                 "is_day": [1, 0, 0, 1],
             },
@@ -70,9 +72,11 @@ class OpenMeteoWeatherProviderTests(unittest.TestCase):
                     "today_low_f": 65,
                     "tonight_low_f": 64,
                     "tonight_rain_percent": 30,
+                    "tonight_precipitation_type": "RAIN",
                     "tomorrow_high_f": 80,
                     "tomorrow_low_f": 66,
                     "tomorrow_rain_percent": 40,
+                    "tomorrow_precipitation_type": "RAIN",
                 },
             },
         )
@@ -189,9 +193,11 @@ class NwsWeatherProviderTests(unittest.TestCase):
                 "today_low_f": 65,
                 "tonight_low_f": 71,
                 "tonight_rain_percent": 53,
+                "tonight_precipitation_type": "RAIN",
                 "tomorrow_high_f": 91,
                 "tomorrow_low_f": 72,
                 "tomorrow_rain_percent": 30,
+                "tomorrow_precipitation_type": "RAIN",
             },
         )
         self.assertTrue(
@@ -224,6 +230,37 @@ class NwsWeatherProviderTests(unittest.TestCase):
         provider, _ = self.provider(routes)
 
         self.assertEqual(provider.get()["data"]["current_condition"], "alert")
+
+    def test_winter_forecast_uses_specific_precipitation_types(self) -> None:
+        routes = dict(self.routes)
+        periods = routes["/gridpoints/PHI/1,2/forecast"]["properties"]["periods"]
+        winter_periods = [dict(period) for period in periods]
+        winter_periods[0]["shortForecast"] = "Snow Showers"
+        winter_periods[1]["shortForecast"] = "Snow Likely"
+        winter_periods[1]["probabilityOfPrecipitation"] = {"value": 70}
+        winter_periods[2]["shortForecast"] = "Sleet And Freezing Rain"
+        winter_periods[2]["probabilityOfPrecipitation"] = {"value": 60}
+        winter_periods[3]["shortForecast"] = "Mostly Cloudy"
+        winter_periods[3]["probabilityOfPrecipitation"] = {"value": 20}
+        routes["/gridpoints/PHI/1,2/forecast"] = {"properties": {"periods": winter_periods}}
+        provider, _ = self.provider(routes)
+
+        data = provider.get()["data"]
+
+        self.assertEqual(data["tonight_precipitation_type"], "SNOW")
+        self.assertEqual(data["tomorrow_precipitation_type"], "MIXED")
+        self.assertEqual(data["current_condition"], "snow")
+
+    def test_winter_storm_alert_uses_the_storm_mark(self) -> None:
+        routes = dict(self.routes)
+        routes["/alerts/active"] = {
+            "features": [
+                {"properties": {"event": "Winter Storm Warning", "severity": "Severe", "urgency": "Expected"}}
+            ]
+        }
+        provider, _ = self.provider(routes)
+
+        self.assertEqual(provider.get()["data"]["current_condition"], "storm")
 
     def test_total_nws_failure_returns_the_open_meteo_fallback(self) -> None:
         provider = NwsWeatherProvider(

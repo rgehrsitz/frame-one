@@ -29,14 +29,32 @@ class WeatherLocation:
     temperature_unit: str = "fahrenheit"
 
 
+def _precipitation_type_for_code(code: int) -> str | None:
+    """Map WMO weather codes to the short precipitation labels on the panel."""
+    if code in {56, 57, 66, 67}:
+        return "ICE"
+    if code in {71, 73, 75, 77, 85, 86}:
+        return "SNOW"
+    if code in {51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99}:
+        return "RAIN"
+    return None
+
+
 def _condition_for_code(code: int) -> str:
-    """Collapse WMO weather codes into the four marks supported by the panel."""
+    """Collapse WMO weather codes into the marks supported by the panel."""
     if code == 0:
         return "clear"
     if code in {1, 2}:
         return "partly_cloudy"
     if code in {3, 45, 48}:
         return "cloudy"
+    precipitation_type = _precipitation_type_for_code(code)
+    if precipitation_type == "SNOW":
+        return "snow"
+    if precipitation_type == "ICE":
+        return "ice"
+    if code in {95, 96, 99}:
+        return "storm"
     return "rain"
 
 
@@ -53,29 +71,44 @@ def _require_series(payload: dict[str, Any], section: str, field: str) -> list[A
     return values
 
 
-def _tonight_values(payload: dict[str, Any], now: datetime) -> tuple[int, int]:
-    """Return the next night period's low temperature and peak rain chance."""
+def _tonight_values(payload: dict[str, Any], now: datetime) -> tuple[int, int, str]:
+    """Return the next night period's low, peak precipitation chance, and type."""
     times = _require_series(payload, "hourly", "time")
     temperatures = _require_series(payload, "hourly", "temperature_2m")
     rain = _require_series(payload, "hourly", "precipitation_probability")
     is_day = _require_series(payload, "hourly", "is_day")
+    weather_codes = payload.get("hourly", {}).get("weather_code")
+    if not isinstance(weather_codes, list) or len(weather_codes) != len(times):
+        weather_codes = [None] * len(times)
     if not (len(times) == len(temperatures) == len(rain) == len(is_day)):
         raise ValueError("hourly weather series lengths differ")
 
-    night: list[tuple[int, int]] = []
+    night: list[tuple[int, int, int | None]] = []
     found_night = False
-    for time_text, temperature, probability, day in zip(times, temperatures, rain, is_day):
+    for time_text, temperature, probability, day, weather_code in zip(
+        times, temperatures, rain, is_day, weather_codes
+    ):
         hour = datetime.fromisoformat(str(time_text))
         if hour < now:
             continue
         if int(day) == 0:
             found_night = True
-            night.append((_whole_number(temperature), _whole_number(probability)))
+            normalized_code = _whole_number(weather_code) if weather_code is not None else None
+            night.append((_whole_number(temperature), _whole_number(probability), normalized_code))
         elif found_night:
             break
     if not night:
         raise ValueError("no upcoming night hours")
-    return min(item[0] for item in night), max(item[1] for item in night)
+    peak_probability = max(item[1] for item in night)
+    peak_types = {
+        precipitation_type
+        for _, probability, code in night
+        if probability == peak_probability and code is not None
+        for precipitation_type in [_precipitation_type_for_code(code)]
+        if precipitation_type is not None
+    }
+    precipitation_type = next(iter(peak_types)) if len(peak_types) == 1 else "MIXED" if peak_types else "RAIN"
+    return min(item[0] for item in night), peak_probability, precipitation_type
 
 
 class OpenMeteoWeatherProvider:
@@ -129,7 +162,11 @@ class OpenMeteoWeatherProvider:
         rain = _require_series(payload, "daily", "precipitation_probability_max")
         if min(len(highs), len(lows), len(rain)) < 2:
             raise ValueError("two daily forecast periods are required")
-        tonight_low, tonight_rain = _tonight_values(payload, now)
+        tonight_low, tonight_rain, tonight_precipitation_type = _tonight_values(payload, now)
+        daily_codes = payload.get("daily", {}).get("weather_code")
+        tomorrow_precipitation_type = "RAIN"
+        if isinstance(daily_codes, list) and len(daily_codes) >= 2:
+            tomorrow_precipitation_type = _precipitation_type_for_code(_whole_number(daily_codes[1])) or "RAIN"
         return {
             "state": "ok",
             "updated_at": now.isoformat(),
@@ -141,19 +178,44 @@ class OpenMeteoWeatherProvider:
                 "today_low_f": _whole_number(lows[0]),
                 "tonight_low_f": tonight_low,
                 "tonight_rain_percent": tonight_rain,
+                "tonight_precipitation_type": tonight_precipitation_type,
                 "tomorrow_high_f": _whole_number(highs[1]),
                 "tomorrow_low_f": _whole_number(lows[1]),
                 "tomorrow_rain_percent": _whole_number(rain[1]),
+                "tomorrow_precipitation_type": tomorrow_precipitation_type,
             },
         }
+
+
+def _precipitation_type_for_text(value: Any) -> str | None:
+    text = str(value).casefold()
+    if "wintry mix" in text or "mixed precipitation" in text:
+        return "MIXED"
+    freezing_rain = "freezing rain" in text or "freezing drizzle" in text or "ice pellets" in text
+    sleet = "sleet" in text
+    snow = "snow" in text or "flurr" in text
+    rain_text = text.replace("freezing rain", "").replace("freezing drizzle", "")
+    rain = "rain" in rain_text or "drizzle" in rain_text or (
+        "shower" in rain_text and not any((freezing_rain, sleet, snow))
+    )
+    types = [name for name, present in (("ICE", freezing_rain), ("SLEET", sleet), ("SNOW", snow), ("RAIN", rain)) if present]
+    if len(types) > 1:
+        return "MIXED"
+    return types[0] if types else None
 
 
 def _condition_for_text(value: Any) -> str | None:
     text = str(value).casefold()
     if any(word in text for word in ("tornado", "thunderstorm")):
         return "storm"
-    if any(word in text for word in ("rain", "shower", "drizzle", "snow", "sleet", "freezing")):
-        return "rain"
+    precipitation_type = _precipitation_type_for_text(text)
+    if precipitation_type is not None:
+        return {
+            "SNOW": "snow",
+            "SLEET": "sleet",
+            "ICE": "ice",
+            "MIXED": "mixed",
+        }.get(precipitation_type, "rain")
     if any(word in text for word in ("partly", "mostly sunny", "mostly clear")):
         return "partly_cloudy"
     if any(word in text for word in ("cloudy", "overcast", "fog")):
@@ -168,6 +230,23 @@ def _period_probability(period: dict[str, Any]) -> int | None:
     if not isinstance(probability, dict) or probability.get("value") is None:
         return None
     return _whole_number(probability["value"])
+
+
+def _periods_precipitation_type(periods: list[dict[str, Any] | None]) -> str | None:
+    """Use the precipitation type from the period with the highest probability."""
+    candidates: list[tuple[int, str]] = []
+    for period in periods:
+        if period is None:
+            continue
+        precipitation_type = _precipitation_type_for_text(period.get("shortForecast"))
+        probability = _period_probability(period)
+        if precipitation_type is not None:
+            candidates.append((probability if probability is not None else -1, precipitation_type))
+    if not candidates:
+        return None
+    peak = max(probability for probability, _ in candidates)
+    types = {precipitation_type for probability, precipitation_type in candidates if probability == peak}
+    return next(iter(types)) if len(types) == 1 else "MIXED"
 
 
 def _period_for(
@@ -193,7 +272,17 @@ def _alert_priority(alert: dict[str, Any]) -> tuple[int, int]:
 
 
 def _alert_condition(event: str) -> str:
-    storm_terms = ("flood", "thunderstorm", "tornado", "hurricane", "tropical storm", "squall")
+    storm_terms = (
+        "flood",
+        "thunderstorm",
+        "tornado",
+        "hurricane",
+        "tropical storm",
+        "squall",
+        "winter storm",
+        "blizzard",
+        "ice storm",
+    )
     return "storm" if any(term in event.casefold() for term in storm_terms) else "alert"
 
 
@@ -273,6 +362,9 @@ class NwsWeatherProvider:
             tonight_probability = _period_probability(tonight)
             if tonight_probability is not None:
                 data["tonight_rain_percent"] = tonight_probability
+            tonight_precipitation_type = _periods_precipitation_type([tonight])
+            if tonight_precipitation_type is not None:
+                data["tonight_precipitation_type"] = tonight_precipitation_type
         if tomorrow_day is not None:
             data["tomorrow_high_f"] = _whole_number(tomorrow_day["temperature"])
         if tomorrow_night is not None:
@@ -287,6 +379,9 @@ class NwsWeatherProvider:
         ]
         if tomorrow_probabilities:
             data["tomorrow_rain_percent"] = max(tomorrow_probabilities)
+        tomorrow_precipitation_type = _periods_precipitation_type([tomorrow_day, tomorrow_night])
+        if tomorrow_precipitation_type is not None:
+            data["tomorrow_precipitation_type"] = tomorrow_precipitation_type
 
         stations = self._get_json(stations_url).get("features")
         if isinstance(stations, list) and stations:
