@@ -162,6 +162,7 @@ class NwsWeatherProviderTests(unittest.TestCase):
             "/stations/KXYZ/observations/latest": {
                 "properties": {
                     "timestamp": "2026-08-05T16:35:00-04:00",
+                    "textDescription": "Clear",
                     "temperature": {"value": 25.0},
                 }
             },
@@ -178,7 +179,7 @@ class NwsWeatherProviderTests(unittest.TestCase):
         )
         return provider, opener
 
-    def test_nws_forecast_is_primary_and_open_meteo_fills_the_missing_today_low(self) -> None:
+    def test_fresh_observation_controls_current_conditions_while_nws_controls_the_forecast(self) -> None:
         provider, opener = self.provider()
 
         state = provider.get()
@@ -188,7 +189,7 @@ class NwsWeatherProviderTests(unittest.TestCase):
             state["data"],
             {
                 "current_temperature_f": 77,
-                "current_condition": "storm",
+                "current_condition": "clear",
                 "today_high_f": 84,
                 "today_low_f": 65,
                 "tonight_low_f": 71,
@@ -204,7 +205,7 @@ class NwsWeatherProviderTests(unittest.TestCase):
             all(request.get_header("User-agent") == "frame-one-dashboard/0.1" for request in opener.requests)
         )
 
-    def test_highest_priority_active_alert_overrides_the_condition(self) -> None:
+    def test_highest_priority_active_alert_does_not_replace_current_conditions(self) -> None:
         routes = dict(self.routes)
         routes["/alerts/active"] = {
             "features": [
@@ -218,9 +219,9 @@ class NwsWeatherProviderTests(unittest.TestCase):
 
         self.assertEqual(state["data"]["active_alert"], "FLASH FLOOD WARNING")
         self.assertEqual(state["data"]["alert_severity"], "Severe")
-        self.assertEqual(state["data"]["current_condition"], "storm")
+        self.assertEqual(state["data"]["current_condition"], "clear")
 
-    def test_non_storm_alert_uses_the_generic_alert_mark(self) -> None:
+    def test_non_storm_alert_does_not_replace_current_conditions(self) -> None:
         routes = dict(self.routes)
         routes["/alerts/active"] = {
             "features": [
@@ -229,7 +230,10 @@ class NwsWeatherProviderTests(unittest.TestCase):
         }
         provider, _ = self.provider(routes)
 
-        self.assertEqual(provider.get()["data"]["current_condition"], "alert")
+        state = provider.get()
+
+        self.assertEqual(state["data"]["active_alert"], "HEAT ADVISORY")
+        self.assertEqual(state["data"]["current_condition"], "clear")
 
     def test_winter_forecast_uses_specific_precipitation_types(self) -> None:
         routes = dict(self.routes)
@@ -243,6 +247,13 @@ class NwsWeatherProviderTests(unittest.TestCase):
         winter_periods[3]["shortForecast"] = "Mostly Cloudy"
         winter_periods[3]["probabilityOfPrecipitation"] = {"value": 20}
         routes["/gridpoints/PHI/1,2/forecast"] = {"properties": {"periods": winter_periods}}
+        routes["/stations/KXYZ/observations/latest"] = {
+            "properties": {
+                "timestamp": "2026-08-05T15:00:00-04:00",
+                "textDescription": "Clear",
+                "temperature": {"value": 25.0},
+            }
+        }
         provider, _ = self.provider(routes)
 
         data = provider.get()["data"]
@@ -251,7 +262,7 @@ class NwsWeatherProviderTests(unittest.TestCase):
         self.assertEqual(data["tomorrow_precipitation_type"], "MIXED")
         self.assertEqual(data["current_condition"], "snow")
 
-    def test_winter_storm_alert_uses_the_storm_mark(self) -> None:
+    def test_winter_storm_alert_stays_separate_from_current_conditions(self) -> None:
         routes = dict(self.routes)
         routes["/alerts/active"] = {
             "features": [
@@ -260,7 +271,10 @@ class NwsWeatherProviderTests(unittest.TestCase):
         }
         provider, _ = self.provider(routes)
 
-        self.assertEqual(provider.get()["data"]["current_condition"], "storm")
+        state = provider.get()
+
+        self.assertEqual(state["data"]["active_alert"], "WINTER STORM WARNING")
+        self.assertEqual(state["data"]["current_condition"], "clear")
 
     def test_total_nws_failure_returns_the_open_meteo_fallback(self) -> None:
         provider = NwsWeatherProvider(

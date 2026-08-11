@@ -191,10 +191,6 @@ def _weather_mark(draw: ImageDraw.ImageDraw, x: int, y: int, code: str) -> None:
         # the cloud and make the mark harder to parse at a glance.
         draw.ellipse((x + 7, y + 3, x + 19, y + 15), outline=INK, width=2)
         cloud(y + 5)
-    elif code == "alert":
-        draw.polygon(((x + 17, y + 2), (x + 2, y + 30), (x + 32, y + 30)), outline=INK)
-        draw.rectangle((x + 16, y + 11, x + 18, y + 21), fill=INK)
-        draw.rectangle((x + 16, y + 25, x + 18, y + 27), fill=INK)
     else:
         cloud(y + 3)
     if code in ("rain", "storm"):

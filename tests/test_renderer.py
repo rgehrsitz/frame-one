@@ -83,7 +83,7 @@ class RendererTests(unittest.TestCase):
         self.assertLessEqual(content_width, available_width - 18)
 
     def test_weather_marks_draw_crisp_ink_for_each_supported_condition(self) -> None:
-        for condition in ("clear", "partly_cloudy", "cloudy", "rain", "snow", "sleet", "ice", "mixed", "storm", "alert"):
+        for condition in ("clear", "partly_cloudy", "cloudy", "rain", "snow", "sleet", "ice", "mixed", "storm"):
             image = Image.new("1", (48, 48), 1)
             _weather_mark(ImageDraw.Draw(image), 4, 4, condition)
             self.assertIn(0, image.getdata(), condition)

@@ -216,11 +216,11 @@ def _condition_for_text(value: Any) -> str | None:
             "ICE": "ice",
             "MIXED": "mixed",
         }.get(precipitation_type, "rain")
-    if any(word in text for word in ("partly", "mostly sunny", "mostly clear")):
+    if any(word in text for word in ("partly", "mostly sunny", "mostly clear", "few clouds", "scattered")):
         return "partly_cloudy"
-    if any(word in text for word in ("cloudy", "overcast", "fog")):
+    if any(word in text for word in ("cloudy", "overcast", "fog", "mist", "haze", "smoke")):
         return "cloudy"
-    if any(word in text for word in ("sunny", "clear")):
+    if any(word in text for word in ("sunny", "clear", "fair")):
         return "clear"
     return None
 
@@ -269,21 +269,6 @@ def _alert_priority(alert: dict[str, Any]) -> tuple[int, int]:
     severity = {"Extreme": 4, "Severe": 3, "Moderate": 2, "Minor": 1}.get(str(alert.get("severity")), 0)
     urgency = {"Immediate": 4, "Expected": 3, "Future": 2, "Past": 1}.get(str(alert.get("urgency")), 0)
     return severity, urgency
-
-
-def _alert_condition(event: str) -> str:
-    storm_terms = (
-        "flood",
-        "thunderstorm",
-        "tornado",
-        "hurricane",
-        "tropical storm",
-        "squall",
-        "winter storm",
-        "blizzard",
-        "ice storm",
-    )
-    return "storm" if any(term in event.casefold() for term in storm_terms) else "alert"
 
 
 class NwsWeatherProvider:
@@ -396,12 +381,22 @@ class NwsWeatherProvider:
     def _add_fresh_observation(data: dict[str, object], observation: dict[str, Any], now: datetime) -> None:
         try:
             observed_at = datetime.fromisoformat(str(observation["timestamp"]))
-            temperature = observation["temperature"]["value"]
             age = now.astimezone(observed_at.tzinfo) - observed_at
-            if temperature is not None and timedelta(0) <= age <= timedelta(minutes=45):
-                data["current_temperature_f"] = round(float(temperature) * 9 / 5 + 32)
         except (KeyError, TypeError, ValueError):
             return
+        if not timedelta(0) <= age <= timedelta(minutes=45):
+            return
+
+        temperature = observation.get("temperature")
+        if isinstance(temperature, dict) and temperature.get("value") is not None:
+            try:
+                data["current_temperature_f"] = round(float(temperature["value"]) * 9 / 5 + 32)
+            except (TypeError, ValueError):
+                pass
+
+        current_condition = _condition_for_text(observation.get("textDescription"))
+        if current_condition is not None:
+            data["current_condition"] = current_condition
 
     def get(self) -> dict[str, object]:
         try:
@@ -428,7 +423,6 @@ class NwsWeatherProvider:
                 event = str(alert.get("event") or "WEATHER ALERT")
                 data["active_alert"] = event.upper()
                 data["alert_severity"] = str(alert.get("severity") or "Unknown")
-                data["current_condition"] = _alert_condition(event)
         except (OSError, TimeoutError, ValueError, TypeError, KeyError, json.JSONDecodeError):
             pass
 
