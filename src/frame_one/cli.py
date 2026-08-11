@@ -168,7 +168,7 @@ def main() -> None:
         )
     elif live_sources:
         # The daily quote is fetched at 2 AM, then kept in the existing local
-        # state cache so ordinary five-minute renders do not restore the sample
+        # state cache so ordinary ten-minute renders do not restore the sample
         # placeholder.  It expires after two days if the daily source is down.
         cached_quote = cache.recall("quote", now)
         if cached_quote is not None:
@@ -183,7 +183,7 @@ def main() -> None:
     if live_sources and last_displayed_at is not None:
         # Hold the header at the last physical update while checking for new
         # content.  Otherwise the changing timestamp itself would make every
-        # five-minute poll look different and force an e-paper refresh.
+        # ten-minute poll look different and force an e-paper refresh.
         state["generated_at"] = last_displayed_at.isoformat()
     image = render_dashboard(state)
     if live_sources and (args.force_display or _image_changed(image, args.output)):
@@ -230,7 +230,7 @@ def _record_render(marker: Path, moment: datetime) -> None:
 def _display_if_changed(image, output: Path, *, force: bool) -> bool:
     """Write to the panel only when the rendered pixels actually differ.
 
-    A full e-paper refresh is slow and visibly flashes, so at a five-minute
+    A full e-paper refresh is slow and visibly flashes, so at a ten-minute
     cadence an unchanged screen should be left alone.
     """
     if not force and not _image_changed(image, output):

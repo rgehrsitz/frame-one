@@ -30,7 +30,7 @@ Every provider returns this envelope to the renderer:
 
 | Display block | Source | First-release decision | Refresh |
 | --- | --- | --- | --- |
-| Weather | NWS API with Open-Meteo fallback | Automated, no account | Every 5 minutes |
+| Weather | NWS API with Open-Meteo fallback | Automated, no account | Every 10 minutes |
 | Gmail unread | Gmail API label metadata | Automated, OAuth read-only | Every 15 min |
 | Claude allowance | Account OAuth (default) or Claude Code status line | Automated; OAuth runs standalone on the Pi | Every refresh round (OAuth) or event-driven (status line) |
 | Codex allowance | Codex App Server | Automated after local ChatGPT sign-in | Every 15 min and on change |
@@ -40,7 +40,7 @@ Every provider returns this envelope to the renderer:
 
 **Providers:** [National Weather Service API](https://www.weather.gov/documentation/services-web-api) as the primary source, with [Open-Meteo](https://open-meteo.com/en/docs) as a fallback and numeric fill source.
 
-**Cost:** neither source requires a paid subscription, account, API key, or credit card for this personal dashboard. NWS requires an identifying User-Agent and publishes reasonable rate limits; the five-minute panel cadence is comfortably below the alert service's documented request guidance. Open-Meteo forecast data is CC BY 4.0 and remains attributed.
+**Cost:** neither source requires a paid subscription, account, API key, or credit card for this personal dashboard. NWS requires an identifying User-Agent and publishes reasonable rate limits; the ten-minute panel cadence is comfortably below the alert service's documented request guidance. Open-Meteo forecast data is CC BY 4.0 and remains attributed.
 
 **Configuration:** the setup screen stores a user-chosen latitude, longitude, timezone, and temperature unit locally on the Pi. It must never infer or transmit the user's location to any service other than the weather provider.
 
@@ -48,7 +48,7 @@ Every provider returns this envelope to the renderer:
 
 **Screen mapping:**
 
-- Header: current temperature and condition icon, including distinct winter precipitation marks. The highest-priority active NWS alert replaces the routine update label and uses a storm or generic alert mark.
+- Header: a fresh station observation supplies both the current temperature and condition icon, including distinct winter precipitation marks. The highest-priority active NWS alert replaces the routine update label without changing the current-condition icon.
 - Forecast strip: Today high/low; Tonight temperature and precipitation probability; Tomorrow high/low and precipitation probability.
 - Forecast precipitation labels identify rain, snow, sleet, ice, or mixed precipitation from the NWS forecast wording instead of describing every probability as rain.
 - If NWS is unavailable, the complete Open-Meteo state is used. If only part of NWS is unavailable, usable NWS alerts or forecast values are combined with Open-Meteo rather than blanking the weather block.
@@ -122,16 +122,16 @@ References: [Codex App Server API overview](https://learn.chatgpt.com/docs/app-s
 Frame One fetches the quote during the 2:00 AM dashboard refresh. The adapter
 accepts only a short quote with an author; an unsuitable or unreachable response
 is `unavailable`. A successful daily quote is kept in the existing local
-last-known-good state cache for up to two days, so normal five-minute renders do
+last-known-good state cache for up to two days, so normal ten-minute renders do
 not restore the sample placeholder. There is no bundled collection, recent-quote
 list, or separate quote file. Include the required `Quotes: ZenQuotes.io`
 attribution in the local setup/about screen.
 
 ## Refresh and failure policy
 
-- The renderer checks sources on their schedules but redraws only when visible data changed. The panel write is skipped when the rendered pixels are identical, so an idle screen does not flash every five minutes.
-- A refresh round runs every 5 minutes, collapsing to hourly between midnight and 6AM.
-- Gmail is polled every 15 minutes; weather hourly; the live quote is fetched daily.
+- The renderer checks sources on their schedules but redraws only when visible data changed. The panel write is skipped when the rendered pixels are identical, so an idle screen does not flash every ten minutes.
+- A refresh round runs every 10 minutes, collapsing to hourly between midnight and 6AM.
+- Weather is polled every ten minutes during the day and hourly overnight; the live quote is fetched daily.
 - A manual refresh button is available for a deliberate update.
 - **Retry before giving up.** Every provider in a round shares one wall-clock deadline. Network sources retry three times with exponential backoff, the Codex App Server twice, and purely local file reads once — retrying a file read cannot change its answer, it only consumes the round's budget.
 - **No provider aborts the round.** An unavailable provider never blocks the rest of the display.

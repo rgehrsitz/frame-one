@@ -108,7 +108,7 @@ in the eventual local setup/about page.
 ### Automatic Pi refresh
 
 The supplied systemd units make the Pi self-starting: weather, Claude, Codex,
-and Gmail poll every five minutes from 6:00 AM through midnight, then hourly
+and Gmail poll every ten minutes from 6:00 AM through midnight, then hourly
 overnight. A separate run at 2:00 AM local time also fetches the daily quote.
 Both use the same lock, so the e-paper panel is never driven by two refreshes
 at once. A poll only refreshes the physical panel when the rendered pixels
@@ -137,15 +137,16 @@ sudo systemctl enable --now frame-one-refresh.timer frame-one-quote.timer
 systemctl list-timers 'frame-one-*'
 ```
 
-The five-minute timer starts about 30 seconds after boot, then continues on
-five-minute wall-clock boundaries.
+The ten-minute timer starts about 30 seconds after boot, then continues on
+ten-minute wall-clock boundaries.
 
 ### Live weather
 
-Open-Meteo needs no account or key for this personal dashboard. Provide an
-explicit latitude and longitude—the software does not infer your location—and
-it will replace the sample weather data for that render. A failed request falls
-back to the last good forecast, then to `—`; it never blocks the other tiles.
+NWS and the Open-Meteo fallback need no account or key for this personal
+dashboard. Provide an explicit latitude and longitude—the software does not
+infer your location—and they will replace the sample weather data for that
+render. A failed request falls back to the last good forecast, then to `—`; it
+never blocks the other tiles.
 
 ```sh
 frame-one \

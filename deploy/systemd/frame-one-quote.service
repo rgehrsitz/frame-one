@@ -18,7 +18,7 @@ Environment=FRAME_ONE_CONFIG_DIR=/home/rgehrsitz/.config/frame-one
 Environment=FRAME_ONE_RESPECT_SCHEDULE=false
 EnvironmentFile=/home/rgehrsitz/.config/frame-one/dashboard.env
 TimeoutStartSec=5min
-# Wait for the five-minute refresh, if it landed at 2:00 exactly, so the quote
+# Wait for the ten-minute refresh, if it landed at 2:00 exactly, so the quote
 # update always runs and the Waveshare panel is never driven concurrently.
 ExecStart=/usr/bin/flock -w 180 /home/rgehrsitz/.config/frame-one/refresh.lock /home/rgehrsitz/frame-one/scripts/refresh-dashboard.sh --live-quote
 
