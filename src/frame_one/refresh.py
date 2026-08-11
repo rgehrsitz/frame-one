@@ -37,7 +37,7 @@ STALE_AFTER_SECONDS: dict[str, int] = {
 CLAUDE_OAUTH_STALE_SECONDS = 1800
 
 # Overnight the panel is not being read, so it redraws hourly instead of every
-# five minutes to spare the e-paper and the Pi's radio.
+# ten minutes to spare the e-paper and the Pi's radio.
 QUIET_HOURS_START = clock_time(0, 0)
 QUIET_HOURS_END = clock_time(6, 0)
 QUIET_HOURS_INTERVAL = timedelta(hours=1)
@@ -140,7 +140,7 @@ class StateCache:
     """The last successful envelope for each provider.
 
     Holding a value across a failed refresh is what keeps a momentary Wi-Fi
-    blip from blanking a tile for five minutes.  The value is only reused while
+    blip from blanking a tile for ten minutes.  The value is only reused while
     it is younger than its own ``stale_after_seconds``; past that the screen
     stops claiming to know and the tile goes to an em dash.
     """
@@ -222,7 +222,7 @@ def is_quiet_hour(moment: datetime) -> bool:
 def is_due(moment: datetime, last_render: datetime | None) -> bool:
     """Decide whether a timer tick should render.
 
-    The timer fires every five minutes around the clock; this collapses the
+    The timer fires every ten minutes around the clock; this collapses the
     overnight ticks to one an hour so all cadence logic lives in one place
     instead of in two systemd units.
     """

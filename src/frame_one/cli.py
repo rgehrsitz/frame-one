@@ -15,7 +15,7 @@ from .providers.claude_oauth import ClaudeUsageProvider
 from .providers.codex import CodexRateLimitProvider
 from .providers.gmail import GmailUnreadProvider
 from .providers.quotes import quote_provider_state
-from .providers.weather import OpenMeteoWeatherProvider, WeatherLocation
+from .providers.weather import NwsWeatherProvider, OpenMeteoWeatherProvider, WeatherLocation
 from .refresh import (
     APP_SERVER,
     CLAUDE_OAUTH_STALE_SECONDS,
@@ -45,7 +45,7 @@ def main() -> None:
         action="store_true",
         help="Fetch and render the live Quote of the Day without storing it separately",
     )
-    parser.add_argument("--live-weather", action="store_true", help="Fetch current weather from Open-Meteo")
+    parser.add_argument("--live-weather", action="store_true", help="Fetch NWS weather with Open-Meteo fallback")
     parser.add_argument(
         "--claude-status-file",
         type=Path,
@@ -107,9 +107,9 @@ def main() -> None:
         live_sources = True
         if args.weather_latitude is None or args.weather_longitude is None:
             parser.error("--live-weather requires --weather-latitude and --weather-longitude")
-        provider = OpenMeteoWeatherProvider(
-            WeatherLocation(args.weather_latitude, args.weather_longitude, args.weather_timezone)
-        )
+        location = WeatherLocation(args.weather_latitude, args.weather_longitude, args.weather_timezone)
+        fallback = OpenMeteoWeatherProvider(location)
+        provider = NwsWeatherProvider(location, fallback.get)
         state["weather"] = _report(
             "weather", resolve("weather", provider.get, cache=cache, now=now, policy=NETWORK, deadline=deadline)
         )
@@ -168,7 +168,7 @@ def main() -> None:
         )
     elif live_sources:
         # The daily quote is fetched at 2 AM, then kept in the existing local
-        # state cache so ordinary five-minute renders do not restore the sample
+        # state cache so ordinary ten-minute renders do not restore the sample
         # placeholder.  It expires after two days if the daily source is down.
         cached_quote = cache.recall("quote", now)
         if cached_quote is not None:
@@ -183,7 +183,7 @@ def main() -> None:
     if live_sources and last_displayed_at is not None:
         # Hold the header at the last physical update while checking for new
         # content.  Otherwise the changing timestamp itself would make every
-        # five-minute poll look different and force an e-paper refresh.
+        # ten-minute poll look different and force an e-paper refresh.
         state["generated_at"] = last_displayed_at.isoformat()
     image = render_dashboard(state)
     if live_sources and (args.force_display or _image_changed(image, args.output)):
@@ -230,7 +230,7 @@ def _record_render(marker: Path, moment: datetime) -> None:
 def _display_if_changed(image, output: Path, *, force: bool) -> bool:
     """Write to the panel only when the rendered pixels actually differ.
 
-    A full e-paper refresh is slow and visibly flashes, so at a five-minute
+    A full e-paper refresh is slow and visibly flashes, so at a ten-minute
     cadence an unchanged screen should be left alone.
     """
     if not force and not _image_changed(image, output):

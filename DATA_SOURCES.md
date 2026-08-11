@@ -30,7 +30,7 @@ Every provider returns this envelope to the renderer:
 
 | Display block | Source | First-release decision | Refresh |
 | --- | --- | --- | --- |
-| Weather | Open-Meteo Forecast API | Automated, no account | Hourly |
+| Weather | NWS API with Open-Meteo fallback | Automated, no account | Every 10 minutes |
 | Gmail unread | Gmail API label metadata | Automated, OAuth read-only | Every 15 min |
 | Claude allowance | Account OAuth (default) or Claude Code status line | Automated; OAuth runs standalone on the Pi | Every refresh round (OAuth) or event-driven (status line) |
 | Codex allowance | Codex App Server | Automated after local ChatGPT sign-in | Every 15 min and on change |
@@ -38,19 +38,20 @@ Every provider returns this envelope to the renderer:
 
 ### 1. Weather
 
-**Provider:** [Open-Meteo Forecast API](https://open-meteo.com/en/docs).
+**Providers:** [National Weather Service API](https://www.weather.gov/documentation/services-web-api) as the primary source, with [Open-Meteo](https://open-meteo.com/en/docs) as a fallback and numeric fill source.
 
-**Cost:** no paid subscription, account, API key, or credit card is needed for this personal non-commercial dashboard. The free tier permits up to 10,000 calls per day; Frame One will make roughly 24 hourly forecast calls per day. The forecast data is CC BY 4.0, so Frame One will include “Weather: Open-Meteo” with the required attribution in its local setup/about screen.
+**Cost:** neither source requires a paid subscription, account, API key, or credit card for this personal dashboard. NWS requires an identifying User-Agent and publishes reasonable rate limits; the ten-minute panel cadence is comfortably below the alert service's documented request guidance. Open-Meteo forecast data is CC BY 4.0 and remains attributed.
 
 **Configuration:** the setup screen stores a user-chosen latitude, longitude, timezone, and temperature unit locally on the Pi. It must never infer or transmit the user's location to any service other than the weather provider.
 
-**Request shape:** request current conditions plus daily `temperature_2m_max`, `temperature_2m_min`, `weather_code`, and `precipitation_probability_max`; request hourly `temperature_2m`, `weather_code`, `precipitation_probability`, and `is_day`. Open-Meteo documents these variables and its coordinate-based forecast endpoint.
+**Request shape:** resolve the configured coordinate through NWS `/points`, then read its linked 12-hour forecast, nearest-station observation, and `/alerts/active?point=…`. NWS forecast conditions and precipitation probabilities are primary; a fresh station observation supplies current temperature. Open-Meteo continues to provide the same compact forecast request as before and fills values NWS omits after a forecast period has elapsed, such as an earlier same-day low.
 
 **Screen mapping:**
 
-- Header: current temperature and condition icon.
-- Forecast strip: Today high/low; Tonight temperature and rain probability; Tomorrow high/low and rain probability.
-- Rain probability appears only at 20% or higher. Otherwise use the space for the condition name or leave it quiet.
+- Header: a fresh station observation supplies both the current temperature and condition icon, including distinct winter precipitation marks. The highest-priority active NWS alert replaces the routine update label without changing the current-condition icon.
+- Forecast strip: Today high/low; Tonight temperature and precipitation probability; Tomorrow high/low and precipitation probability.
+- Forecast precipitation labels identify rain, snow, sleet, ice, or mixed precipitation from the NWS forecast wording instead of describing every probability as rain.
+- If NWS is unavailable, the complete Open-Meteo state is used. If only part of NWS is unavailable, usable NWS alerts or forecast values are combined with Open-Meteo rather than blanking the weather block.
 
 ### 2. Gmail unread count
 
@@ -121,16 +122,16 @@ References: [Codex App Server API overview](https://learn.chatgpt.com/docs/app-s
 Frame One fetches the quote during the 2:00 AM dashboard refresh. The adapter
 accepts only a short quote with an author; an unsuitable or unreachable response
 is `unavailable`. A successful daily quote is kept in the existing local
-last-known-good state cache for up to two days, so normal five-minute renders do
+last-known-good state cache for up to two days, so normal ten-minute renders do
 not restore the sample placeholder. There is no bundled collection, recent-quote
 list, or separate quote file. Include the required `Quotes: ZenQuotes.io`
 attribution in the local setup/about screen.
 
 ## Refresh and failure policy
 
-- The renderer checks sources on their schedules but redraws only when visible data changed. The panel write is skipped when the rendered pixels are identical, so an idle screen does not flash every five minutes.
-- A refresh round runs every 5 minutes, collapsing to hourly between midnight and 6AM.
-- Gmail is polled every 15 minutes; weather hourly; the live quote is fetched daily.
+- The renderer checks sources on their schedules but redraws only when visible data changed. The panel write is skipped when the rendered pixels are identical, so an idle screen does not flash every ten minutes.
+- A refresh round runs every 10 minutes, collapsing to hourly between midnight and 6AM.
+- Weather is polled every ten minutes during the day and hourly overnight; the live quote is fetched daily.
 - A manual refresh button is available for a deliberate update.
 - **Retry before giving up.** Every provider in a round shares one wall-clock deadline. Network sources retry three times with exponential backoff, the Codex App Server twice, and purely local file reads once — retrying a file read cannot change its answer, it only consumes the round's budget.
 - **No provider aborts the round.** An unavailable provider never blocks the rest of the display.
