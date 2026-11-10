@@ -168,14 +168,34 @@ machine involved. Authorize it once:
 frame-one-claude-login
 ```
 
-It prints a URL. Open it in a browser on any machine, approve, then paste the
-address bar back — the page will fail to load, which is expected; the code is
-in the URL. The credential is written to `~/.config/frame-one/claude-oauth.json`
-with `0600` permissions and refreshes itself from then on.
+It prints a URL. Open it in a browser on any machine and approve — the command
+serves its own redirect on loopback, so the approval comes back by itself and
+there is nothing to copy. The credential is written to
+`~/.config/frame-one/claude-oauth.json` with `0600` permissions and refreshes
+itself from then on.
 
-Refresh tokens do eventually expire outright. When that happens the Claude tile
-reports `not authorized yet; run frame-one-claude-login` and shows `—`; re-run
-the login command. That is a re-authorization, not a fault.
+A headless Pi has no browser of its own, so forward the redirect port when you
+connect and the approval still lands on the Pi — which keeps the credential on
+the panel instead of routing it through your laptop:
+
+```sh
+ssh -L 18924:localhost:18924 you@frame-one.local
+frame-one-claude-login
+```
+
+Where no port can be forwarded, `frame-one-claude-login --paste` keeps the
+original flow: approve, then paste the whole address bar back. The page will
+fail to load, which is expected; the code is in the URL.
+
+Refresh tokens do eventually expire outright. When that happens the panel says
+so plainly — the Claude tile drops its allowance rows and shows a key above
+`SIGN-IN NEEDED` and the command to run — and the log reports `not authorized,
+or the authorization expired; run frame-one-claude-login`. Re-run the login
+command. That is a re-authorization, not a fault.
+
+Expiry is the one failure retrying cannot mend, so the provider reports it as
+`needs_setup` rather than `unavailable`: the refresh stops being retried every
+round, and the panel asks for a person instead of blaming the network.
 
 ```sh
 frame-one --input ~/frame-one/samples/dashboard-state.json \

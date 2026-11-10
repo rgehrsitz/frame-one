@@ -207,6 +207,72 @@ def _weather_mark(draw: ImageDraw.ImageDraw, x: int, y: int, code: str) -> None:
         draw.polygon(((x + 20, y + 23), (x + 15, y + 31), (x + 20, y + 30), (x + 16, y + 36)), fill=INK)
 
 
+# The key is sized to carry the same visual weight as the 80px allowance
+# numerals it stands in for, so one tile in sign-in does not read as an empty one.
+SIGN_IN_MARK_RADIUS = 17
+SIGN_IN_MARK_SHAFT = 32
+SIGN_IN_MARK_HEIGHT = SIGN_IN_MARK_RADIUS * 2 + SIGN_IN_MARK_SHAFT
+
+
+def _sign_in_mark(draw: ImageDraw.ImageDraw, center_x: int, center_y: int) -> None:
+    """Draw the key that marks a tile waiting on a person, not on the network.
+
+    An em dash says "no value"; this says "no value, and only you can fix it".
+    The distinction is the whole point of the tile, so it gets a mark that reads
+    from across the room rather than a line of small type.
+    """
+    bow_y = center_y - SIGN_IN_MARK_HEIGHT // 2 + SIGN_IN_MARK_RADIUS
+    draw.ellipse(
+        (
+            center_x - SIGN_IN_MARK_RADIUS,
+            bow_y - SIGN_IN_MARK_RADIUS,
+            center_x + SIGN_IN_MARK_RADIUS,
+            bow_y + SIGN_IN_MARK_RADIUS,
+        ),
+        outline=INK,
+        width=5,
+    )
+    shaft_top = bow_y + SIGN_IN_MARK_RADIUS - 2
+    shaft_bottom = shaft_top + SIGN_IN_MARK_SHAFT
+    draw.rectangle((center_x - 3, shaft_top, center_x + 3, shaft_bottom), fill=INK)
+    for tooth_bottom in (shaft_bottom, shaft_bottom - 12):
+        draw.rectangle((center_x + 3, tooth_bottom - 5, center_x + 17, tooth_bottom), fill=INK)
+
+
+def _render_claude_sign_in(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+) -> None:
+    """Render the Claude tile when the panel's authorization has lapsed.
+
+    The allowance rows are deliberately dropped rather than filled with em
+    dashes: every one of them would be unknown for the same single reason, and
+    saying that reason once is worth more than repeating "—" four times.
+    """
+    left, top, right, bottom = box
+    width = right - left
+    title_font = _fit_font(draw, "display", "CLAUDE", STATUS_TITLE_SIZE, width - 32)
+    label_font = _fit_font(draw, "display", "SIGN-IN NEEDED", STATUS_PRIMARY_LABEL_SIZE, width - 32)
+    hint_font = _fit_font(draw, "display", "RUN ON THE PI", 16, width - 52)
+    command_font = _fit_font(draw, "mono", "frame-one-claude-login", 15, width - 28)
+
+    _centered(draw, (left, top + STATUS_TITLE_BOX[0], right, top + STATUS_TITLE_BOX[1]), "CLAUDE", title_font)
+    _centered(
+        draw,
+        (left, top + STATUS_PRIMARY_LABEL_BOX[0], right, top + STATUS_PRIMARY_LABEL_BOX[1]),
+        "SIGN-IN NEEDED",
+        label_font,
+    )
+    _sign_in_mark(
+        draw,
+        (left + right) // 2,
+        # Nudged below the box's centre so the bow clears the label above it.
+        top + (STATUS_PRIMARY_VALUE_BOX[0] + STATUS_PRIMARY_VALUE_BOX[1]) // 2 + 6,
+    )
+    _centered(draw, (left, bottom - 62, right, bottom - 42), "RUN ON THE PI", hint_font)
+    _centered(draw, (left, bottom - 34, right, bottom - 10), "frame-one-claude-login", command_font)
+
+
 def _render_forecast_item(
     draw: ImageDraw.ImageDraw,
     box: tuple[int, int, int, int],
@@ -239,6 +305,9 @@ def _render_claude_column(
     provider: Provider,
 ) -> None:
     """Render Claude's two deliberate, independently-resetting allowances."""
+    if provider.state == "needs_setup":
+        _render_claude_sign_in(draw, box)
+        return
     left, top, right, bottom = box
     width = right - left
     title_font = _fit_font(draw, "display", "CLAUDE", STATUS_TITLE_SIZE, width - 32)

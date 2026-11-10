@@ -20,6 +20,7 @@ from frame_one.renderer import (
     STATUS_PRIMARY_LABEL_SIZE,
     STATUS_PRIMARY_VALUE_BOX,
     STATUS_PRIMARY_VALUE_SIZE,
+    STATUS_BOTTOM,
     _font,
     _text_width,
     _weather_mark,
@@ -109,6 +110,78 @@ class RendererTests(unittest.TestCase):
         values = [call.args[3] for call in forecast_item.call_args_list]
         self.assertTrue(any("SNOW 10%" in value for value in values))
         self.assertTrue(any("SLEET 40%" in value for value in values))
+
+
+class ClaudeSignInTileTests(unittest.TestCase):
+    """A lapsed authorization has to look different from a quiet network.
+
+    The panel is the only place most of this ever shows, so "needs_setup" must
+    reach the glass as an instruction rather than as one more em dash.
+    """
+
+    def _tile(self, claude_state: dict[str, object]) -> Image.Image:
+        state = json.loads((ROOT / "samples/dashboard-state.json").read_text())
+        state["claude"] = claude_state
+        image = render_dashboard(state)
+        return image.crop((COLUMN_BREAKS[0], FORECAST_BOTTOM, COLUMN_BREAKS[1], STATUS_BOTTOM))
+
+    def test_the_sign_in_tile_differs_from_the_unavailable_one(self) -> None:
+        waiting = self._tile({"state": "needs_setup", "data": {}})
+        blipped = self._tile({"state": "unavailable", "data": {}})
+
+        self.assertNotEqual(list(waiting.getdata()), list(blipped.getdata()))
+
+    def test_the_sign_in_tile_puts_more_ink_on_the_glass_than_em_dashes(self) -> None:
+        waiting = self._tile({"state": "needs_setup", "data": {}})
+        blipped = self._tile({"state": "unavailable", "data": {}})
+
+        self.assertGreater(
+            list(blipped.getdata()).count(0), 0, "the unavailable tile should still draw something"
+        )
+        self.assertGreater(list(waiting.getdata()).count(0), list(blipped.getdata()).count(0))
+
+    def test_an_absent_claude_section_also_asks_for_sign_in(self) -> None:
+        state = json.loads((ROOT / "samples/dashboard-state.json").read_text())
+        state.pop("claude", None)
+        image = render_dashboard(state)
+        absent = image.crop((COLUMN_BREAKS[0], FORECAST_BOTTOM, COLUMN_BREAKS[1], STATUS_BOTTOM))
+
+        self.assertEqual(list(absent.getdata()), list(self._tile({"state": "needs_setup", "data": {}}).getdata()))
+
+    def test_a_working_tile_is_untouched_by_the_sign_in_path(self) -> None:
+        working = self._tile(
+            {
+                "state": "ok",
+                "data": {
+                    "window_label": "5-HOUR",
+                    "percent_remaining": 95,
+                    "resets_at": "2026-11-10T13:30:00-05:00",
+                    "secondary_label": "WEEK",
+                    "secondary_percent_remaining": 97,
+                    "secondary_resets_at": "2026-11-15T09:00:00-05:00",
+                },
+            }
+        )
+
+        self.assertNotEqual(
+            list(working.getdata()), list(self._tile({"state": "needs_setup", "data": {}}).getdata())
+        )
+
+    def test_the_sign_in_mark_stays_inside_its_column(self) -> None:
+        """The key must not bleed into the rules that separate the tiles.
+
+        Compared against the ordinary tile rather than against zero, because
+        the column's own rules already put ink on these edges.
+        """
+        waiting = self._tile({"state": "needs_setup", "data": {}})
+        blipped = self._tile({"state": "unavailable", "data": {}})
+
+        for x in (0, waiting.width - 1):
+            self.assertEqual(
+                [waiting.getpixel((x, y)) for y in range(waiting.height)],
+                [blipped.getpixel((x, y)) for y in range(blipped.height)],
+                f"the sign-in tile changed ink on the column edge at x={x}",
+            )
 
 
 if __name__ == "__main__":
