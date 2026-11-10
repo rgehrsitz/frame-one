@@ -37,11 +37,37 @@ from .providers.claude_oauth import (
 DEFAULT_CREDENTIALS = Path.home() / ".config" / "frame-one" / "claude-oauth.json"
 DEFAULT_TIMEOUT_SECONDS = 300
 
+# Longest a single accepted connection may hold the server before it is dropped.
+# Generous for a real redirect, short enough that a silent one costs little.
+CONNECTION_READ_TIMEOUT = 10.0
+
 _PAGE = """<!doctype html>
 <html lang="en"><meta charset="utf-8"><title>Frame One</title>
 <body style="font:16px system-ui;margin:4rem auto;max-width:28rem;text-align:center">
 <h1 style="font-size:1.25rem">{heading}</h1><p>{detail}</p></body></html>
 """
+
+
+class _CallbackServer(HTTPServer):
+    """A one-shot loopback server that cannot be stalled by a silent caller.
+
+    ``HTTPServer.timeout`` bounds only the wait for a connection.  Once one is
+    accepted, the handler's reads block with no timeout of their own, so a
+    browser preconnect -- a socket opened speculatively and left silent -- would
+    hold this single-threaded server forever: the deadline would never be
+    rechecked, and the connection carrying the real redirect would never be
+    accepted.  Capping each accepted connection by whatever is left of the
+    authorization deadline keeps control coming back to the loop.
+    """
+
+    def __init__(self, address: tuple[str, int], handler: type, *, deadline_in: object) -> None:
+        super().__init__(address, handler)
+        self._deadline_in = deadline_in
+
+    def finish_request(self, request: object, client_address: object) -> None:
+        remaining = self._deadline_in()  # type: ignore[operator]
+        request.settimeout(max(0.1, min(CONNECTION_READ_TIMEOUT, remaining)))  # type: ignore[attr-defined]
+        super().finish_request(request, client_address)  # type: ignore[arg-type]
 
 
 class _CallbackHandler(BaseHTTPRequestHandler):
@@ -100,13 +126,17 @@ def capture_authorization_code(
     it, can deliver the redirect.
     """
     redirect = urlparse(REDIRECT_URI)
-    server = HTTPServer((redirect.hostname or "127.0.0.1", redirect.port or 80), _CallbackHandler)
+    deadline = monotonic() + timeout_seconds  # type: ignore[operator]
+    server = _CallbackServer(
+        (redirect.hostname or "127.0.0.1", redirect.port or 80),
+        _CallbackHandler,
+        deadline_in=lambda: deadline - monotonic(),  # type: ignore[operator]
+    )
     server.timeout = 1
     server.expected_state = expected_state  # type: ignore[attr-defined]
     server.captured = None  # type: ignore[attr-defined]
     server.failure = None  # type: ignore[attr-defined]
 
-    deadline = monotonic() + timeout_seconds  # type: ignore[operator]
     try:
         while server.captured is None and server.failure is None:  # type: ignore[attr-defined]
             if monotonic() >= deadline:  # type: ignore[operator]
@@ -181,6 +211,10 @@ def _listen(state: str, timeout_seconds: int) -> str:
     print(f"    ssh -L {redirect.port}:localhost:{redirect.port} you@this-host )\n")
     try:
         return capture_authorization_code(expected_state=state, timeout_seconds=timeout_seconds)
+    except TimeoutError:
+        # TimeoutError subclasses OSError, and nobody waiting for a browser that
+        # never came wants to land on a blocking input() prompt instead.
+        raise
     except OSError as error:
         # Something already holds the port, so the redirect cannot be served
         # here.  Hand the person the flow that needs no listener at all.
