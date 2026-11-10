@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import io
 import json
 from pathlib import Path
 import stat
@@ -12,6 +13,7 @@ from urllib.parse import parse_qs, urlparse
 
 from frame_one.providers.claude_oauth import (
     CLIENT_ID,
+    ReauthorizationRequired,
     REDIRECT_URI,
     REFRESH_SKEW_SECONDS,
     ClaudeUsageProvider,
@@ -25,6 +27,12 @@ from frame_one.providers.claude_oauth import (
     read_credentials,
     write_credentials,
 )
+
+
+def token_error(code: int, body: object | None) -> HTTPError:
+    """Build a token-endpoint failure, optionally with a readable JSON body."""
+    stream = None if body is None else io.BytesIO(json.dumps(body).encode("utf-8"))
+    return HTTPError("https://platform.claude.com/v1/oauth/token", code, "Error", {}, stream)
 
 
 USAGE = {
@@ -301,3 +309,71 @@ class UsageProviderTests(unittest.TestCase):
 
         self.assertNotIn("access", rendered)
         self.assertNotIn("refresh", rendered)
+
+class DeadGrantTests(unittest.TestCase):
+    """An authorization that cannot come back must say so, not look like a blip.
+
+    These cover the failure that silently blanked the panel: a refresh token
+    expires, every later round reports "unavailable", and nothing ever tells
+    anyone the panel simply needs authorizing again.
+    """
+
+    def setUp(self) -> None:
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.path = Path(directory.name) / "claude-oauth.json"
+        write_credentials(self.path, Credentials("access", "refresh", 0.0))
+
+    def _get(self, *responses: object) -> dict[str, object]:
+        http = FakeHttp(*responses)
+        self.http = http
+        return ClaudeUsageProvider(self.path, opener=http, now=lambda: 0.0).get()
+
+    def test_an_expired_refresh_token_reports_needs_setup(self) -> None:
+        state = self._get(token_error(400, {"error": "invalid_grant", "error_description": "Refresh token expired"}))
+
+        self.assertEqual(state, {"state": "needs_setup", "data": {}})
+
+    def test_a_revoked_grant_reports_needs_setup(self) -> None:
+        state = self._get(token_error(400, {"error": "unauthorized_client"}))
+
+        self.assertEqual(state, {"state": "needs_setup", "data": {}})
+
+    def test_a_dead_grant_stops_before_the_usage_call(self) -> None:
+        self._get(token_error(400, {"error": "invalid_grant"}))
+
+        self.assertEqual(len(self.http.requests), 1)
+
+    def test_a_dead_grant_found_after_a_usage_401_also_reports_needs_setup(self) -> None:
+        write_credentials(self.path, Credentials("access", "refresh", 10_000.0))
+
+        state = self._get(
+            HTTPError("https://api.anthropic.com", 401, "Unauthorized", {}, None),
+            token_error(400, {"error": "invalid_grant"}),
+        )
+
+        self.assertEqual(state, {"state": "needs_setup", "data": {}})
+
+    def test_an_unreadable_refusal_is_still_terminal(self) -> None:
+        state = self._get(token_error(400, None))
+
+        self.assertEqual(state, {"state": "needs_setup", "data": {}})
+
+    def test_a_server_fault_at_the_token_endpoint_stays_retryable(self) -> None:
+        state = self._get(token_error(503, {"error": "temporarily_unavailable"}))
+
+        self.assertEqual(state, {"state": "unavailable", "data": {}})
+
+    def test_an_unrecognized_400_stays_retryable(self) -> None:
+        state = self._get(token_error(400, {"error": "server_error"}))
+
+        self.assertEqual(state, {"state": "unavailable", "data": {}})
+
+    def test_the_dead_grant_signal_is_an_exception_the_caller_can_name(self) -> None:
+        self.assertTrue(issubclass(ReauthorizationRequired, Exception))
+
+    def test_a_dead_grant_leaves_the_stored_credential_alone(self) -> None:
+        self._get(token_error(400, {"error": "invalid_grant"}))
+
+        self.assertEqual(read_credentials(self.path).refresh_token, "refresh")
+

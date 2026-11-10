@@ -41,6 +41,35 @@ OAUTH_BETA = "oauth-2025-04-20"
 REFRESH_SKEW_SECONDS = 600
 DEFAULT_EXPIRES_IN = 28800
 
+# Token-endpoint errors that mean the stored grant itself is dead.  Anything
+# else from that endpoint may be a blip and is still worth another attempt.
+TERMINAL_TOKEN_ERRORS = frozenset({"invalid_grant", "invalid_client", "unauthorized_client"})
+
+
+class ReauthorizationRequired(Exception):
+    """The stored refresh token can no longer be exchanged.
+
+    This is the one failure retrying cannot mend: a refresh token that has
+    expired or been revoked stays that way until a person authorizes the panel
+    again.  Reporting it apart from a network blip is the whole point -- an
+    expired grant that reads as "unavailable" leaves the tile blank for weeks
+    while nothing in the log ever asks anyone to sign in again.
+    """
+
+
+def _grant_is_dead(error: HTTPError) -> bool:
+    """Say whether a token-endpoint failure rules out every later attempt."""
+    if error.code not in (400, 401, 403):
+        return False
+    try:
+        payload = json.loads(error.read().decode("utf-8"))
+    except Exception:  # noqa: BLE001 - an unreadable body must not mask the verdict
+        # The token endpoint only answers 400/401/403 when it has judged the
+        # request itself, and this request's shape is fixed, so the grant is
+        # what it is refusing even when the body cannot be read back.
+        return True
+    return isinstance(payload, dict) and payload.get("error") in TERMINAL_TOKEN_ERRORS
+
 
 # --------------------------------------------------------------------------
 # One-time authorization
@@ -283,18 +312,27 @@ class ClaudeUsageProvider:
                 credentials = self._refresh(credentials)
                 payload = self._usage(credentials)
             return self._parse(payload)
+        except ReauthorizationRequired:
+            # Terminal, so the caller stops retrying and the round says plainly
+            # that the panel needs authorizing rather than blaming the network.
+            return {"state": "needs_setup", "data": {}}
         except (OSError, URLError, TimeoutError, ValueError, TypeError, KeyError, json.JSONDecodeError):
             return {"state": "unavailable", "data": {}}
 
     def _refresh(self, credentials: Credentials) -> Credentials:
-        payload = self._post(
-            TOKEN_URL,
-            {
-                "grant_type": "refresh_token",
-                "refresh_token": credentials.refresh_token,
-                "client_id": CLIENT_ID,
-            },
-        )
+        try:
+            payload = self._post(
+                TOKEN_URL,
+                {
+                    "grant_type": "refresh_token",
+                    "refresh_token": credentials.refresh_token,
+                    "client_id": CLIENT_ID,
+                },
+            )
+        except HTTPError as error:
+            if _grant_is_dead(error):
+                raise ReauthorizationRequired("the stored refresh token was rejected") from error
+            raise
         refreshed = Credentials.from_token_response(payload, now=self._now(), previous=credentials)
         write_credentials(self._path, refreshed)
         return refreshed

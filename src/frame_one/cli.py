@@ -207,7 +207,7 @@ def _report(name: str, state: dict[str, object]) -> dict[str, object]:
     if status == "stale":
         print(f"{name}: refresh failed; showing last known value")
     elif status == "needs_setup":
-        print(f"{name}: not authorized yet; run frame-one-claude-login")
+        print(f"{name}: not authorized, or the authorization expired; run frame-one-claude-login")
     elif status != "ok":
         print(f"{name}: unavailable after retries; showing em dash")
     return state
